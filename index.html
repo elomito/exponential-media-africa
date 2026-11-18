@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        function isBrowserExtensionOrigin(text) {
+          if (!text || typeof text !== 'string') return false;
+          return (
+            text.indexOf('chrome-extension://') !== -1 ||
+            text.indexOf('moz-extension://') !== -1 ||
+            text.indexOf('safari-extension://') !== -1
+          );
+        }
+        window.addEventListener(
+          'error',
+          function (e) {
+            var src = (e && e.filename) || '';
+            var stack = (e && e.error && e.error.stack) || '';
+            if (isBrowserExtensionOrigin(src) || isBrowserExtensionOrigin(stack)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+        window.addEventListener(
+          'unhandledrejection',
+          function (e) {
+            var reason = e && e.reason;
+            var stack = (reason && reason.stack) || '';
+            var msg = (reason && reason.message) || String(reason || '');
+            if (
+              isBrowserExtensionOrigin(stack) ||
+              msg.indexOf('Failed to connect to MetaMask') !== -1
+            ) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+      })();
+    </script>
+    <link rel="icon" type="image/png" href="/assets/profile/brand/exp-mark.png" />
+    <title>Exponential Media Africa — Imaginative Solutions for Exponential Growth</title>
+    <meta
+      name="description"
+      content="Exponential Media Africa is a results-driven digital marketing agency in Kilimani, Nairobi helping brands stand out across Kenya, Uganda, Rwanda, DRC, and Zambia through Visual Design, Social Media Management, Content Creation, Influencer Marketing, Media Buy & Brand Activation."
+    />
+    <meta
+      name="keywords"
+      content="Exponential Media Africa, Marketing agency Nairobi, Creative agency Kenya, Social Media Management Kenya, Content Creation Nairobi, Influencer Marketing Kenya, Media Buy Kenya, Brand Activation Kenya, Visual Design Nairobi"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Exponential Media Africa" />
+    <meta property="og:title" content="Exponential Media Africa — Imaginative Solutions for Exponential Growth" />
+    <meta
+      property="og:description"
+      content="Imaginative Solutions for Exponential Growth. Social Media Management, Content Creation, Influencer Marketing, Media Buy, Brand Activation, and Visual Design from Nairobi across Africa."
+    />
+    <meta property="og:image" content="/assets/profile/brand/exp-logo-dark.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Exponential Media Africa — Imaginative Solutions for Exponential Growth" />
+    <meta
+      name="twitter:description"
+      content="Results-driven creative and digital marketing agency at A3-10 Casamia, Ngong Road, Kilimani, Nairobi."
+    />
+    <meta name="twitter:image" content="/assets/profile/brand/exp-logo-dark.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "ProfessionalService",
+        "name": "Exponential Media Africa",
+        "slogan": "Imaginative Solutions for Exponential Growth",
+        "url": "https://exponentialmedia.africa/",
+        "logo": "/assets/profile/brand/exp-mark.png",
+        "image": "/assets/profile/brand/exp-logo-dark.png",
+        "description": "Results-driven creative and digital marketing agency combining creativity, strategy, and technology to help brands stand out in the digital age.",
+        "email": "info@exponentialmedia.africa",
+        "telephone": ["+254 728 231 221", "+254 728 232 723"],
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "A3-10 Casamia, Ngong Road, Kilimani",
+          "addressLocality": "Nairobi",
+          "addressCountry": "KE"
+        },
+        "areaServed": [
+          "Kenya",
+          "Uganda",
+          "Rwanda",
+          "Democratic Republic of the Congo",
+          "Zambia"
+        ],
+        "knowsAbout": [
+          "Social Media Management",
+          "Content Creation & Marketing",
+          "Influencer Marketing",
+          "Media Buy",
+          "Brand Activation",
+          "Visual Design"
+        ]
+      }
+    </script>
+  </head>
+  <body class="bg-[#0B0B0D] text-[#F4F4F2] antialiased selection:bg-[#ED2126] selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,237 @@
+{
+  "entities": {
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Verified website configuration, contact details, and configurable impact metric placeholders.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "tagline": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "email": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "primaryPhone": { "type": "string", "minLength": 5, "maxLength": 40 },
+        "secondaryPhone": { "type": "string", "minLength": 0, "maxLength": 40 },
+        "headquartersAddress": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "campusAddress": { "type": "string", "minLength": 0, "maxLength": 200 },
+        "socialLinks": { "type": "object" },
+        "impactMetrics": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyName", "email", "primaryPhone", "headquartersAddress"]
+    },
+    "PortfolioProject": {
+      "title": "PortfolioProject",
+      "description": "Portfolio project or case study entry.",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "minLength": 2, "maxLength": 120, "pattern": "^[a-z0-9-]+$" },
+        "title": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "category": { "type": "string", "enum": ["Branding", "Commercial Production", "Photography", "Videography", "Influencer Campaigns", "Events", "Brand Activations", "Digital Marketing"] },
+        "division": { "type": "string", "enum": ["creative", "estudios", "marketing", "emtc"] },
+        "clientName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "summary": { "type": "string", "minLength": 10, "maxLength": 500 },
+        "challenge": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "solution": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "deliverables": { "type": "array" },
+        "imageUrl": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "isPlaceholder": { "type": "boolean" },
+        "featured": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "isDeleted": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["slug", "title", "category", "division", "clientName", "summary", "status", "isDeleted"]
+    },
+    "ServiceItem": {
+      "title": "ServiceItem",
+      "description": "Service capability under one of the four Exponential Media Africa divisions.",
+      "type": "object",
+      "properties": {
+        "division": { "type": "string", "enum": ["creative", "estudios", "marketing", "emtc"] },
+        "title": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "problemSolved": { "type": "string", "minLength": 5, "maxLength": 400 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 1000 },
+        "order": { "type": "number" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["division", "title", "description", "status", "isDeleted"]
+    },
+    "InsightArticle": {
+      "title": "InsightArticle",
+      "description": "Editorial article, industry insight, or company update.",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "minLength": 2, "maxLength": 120, "pattern": "^[a-z0-9-]+$" },
+        "title": { "type": "string", "minLength": 4, "maxLength": 180 },
+        "category": { "type": "string", "enum": ["Industry Articles", "Marketing Insights", "Creative Trends", "Company Updates", "Educational Content"] },
+        "excerpt": { "type": "string", "minLength": 10, "maxLength": 400 },
+        "body": { "type": "string", "minLength": 20, "maxLength": 20000 },
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "authorRole": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "publishedDate": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "readTime": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "imageUrl": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "featured": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["slug", "title", "category", "excerpt", "body", "authorName", "publishedDate", "status", "isDeleted"]
+    },
+    "TestimonialItem": {
+      "title": "TestimonialItem",
+      "description": "Authorised client testimonial.",
+      "type": "object",
+      "properties": {
+        "quote": { "type": "string", "minLength": 10, "maxLength": 1000 },
+        "clientName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "clientRole": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "companyName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "isPlaceholder": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["quote", "clientName", "companyName", "status", "isDeleted"]
+    },
+    "ClientLogo": {
+      "title": "ClientLogo",
+      "description": "Authorised client brand mark.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "sector": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "region": { "type": "string", "maxLength": 80 },
+        "logoUrl": { "type": "string", "maxLength": 500 },
+        "isPlaceholder": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["name", "status", "isDeleted"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "Leadership and creative team profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "role": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "division": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "bio": { "type": "string", "minLength": 10, "maxLength": 500 },
+        "photoUrl": { "type": "string", "maxLength": 500 },
+        "isPlaceholder": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["name", "role", "status", "isDeleted"]
+    },
+    "ProjectInquiry": {
+      "title": "ProjectInquiry",
+      "description": "Submitted smart project inquiry (PII-protected, Admin read-only).",
+      "type": "object",
+      "properties": {
+        "referenceCode": { "type": "string", "pattern": "^EMA-[0-9]{4}-[A-Z0-9]{6}$" },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "businessEmail": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "companyName": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "phone": { "type": "string", "minLength": 7, "maxLength": 30 },
+        "industry": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "requiredServices": { "type": "array" },
+        "estimatedBudget": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "projectTimeline": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "projectDescription": { "type": "string", "minLength": 10, "maxLength": 3000 },
+        "consentAccepted": { "type": "boolean" },
+        "inquiryStatus": { "type": "string", "enum": ["new", "reviewing", "contacted", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["referenceCode", "fullName", "businessEmail", "companyName", "phone", "industry", "requiredServices", "estimatedBudget", "projectTimeline", "projectDescription", "consentAccepted", "inquiryStatus", "createdAt"]
+    },
+    "NewsletterSubscriber": {
+      "title": "NewsletterSubscriber",
+      "description": "Consent-verified newsletter subscriber (PII-protected).",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "consentAccepted": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "unsubscribed"] },
+        "unsubscribeToken": { "type": "string", "minLength": 16, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "consentAccepted", "status", "unsubscribeToken", "createdAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Role-based CMS user account.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "email": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["ADMIN", "EDITOR"] },
+        "active": { "type": "boolean" }
+      },
+      "required": ["email", "role", "active"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security and content audit record.",
+      "type": "object",
+      "properties": {
+        "actorUid": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "actorEmail": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "actorRole": { "type": "string", "enum": ["ADMIN", "EDITOR"] },
+        "action": { "type": "string", "minLength": 3, "maxLength": 100 },
+        "targetCollection": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "targetId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "summary": { "type": "string", "minLength": 3, "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actorUid", "actorEmail", "actorRole", "action", "targetCollection", "targetId", "summary", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/site_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SiteSettings" },
+      "description": "Public website settings and verified contact configuration."
+    },
+    "/portfolio_projects/{projectId}": {
+      "schema": { "$ref": "#/entities/PortfolioProject" },
+      "description": "Portfolio case studies."
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/ServiceItem" },
+      "description": "Division service offerings."
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/InsightArticle" },
+      "description": "Insights editorial articles."
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": { "$ref": "#/entities/TestimonialItem" },
+      "description": "Authorised client testimonials."
+    },
+    "/client_logos/{logoId}": {
+      "schema": { "$ref": "#/entities/ClientLogo" },
+      "description": "Authorised client logo items."
+    },
+    "/team_members/{memberId}": {
+      "schema": { "$ref": "#/entities/TeamMember" },
+      "description": "Leadership and creative team profiles."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": { "$ref": "#/entities/ProjectInquiry" },
+      "description": "Confidential client project inquiries."
+    },
+    "/newsletter_subscribers/{subscriberHash}": {
+      "schema": { "$ref": "#/entities/NewsletterSubscriber" },
+      "description": "Consent-tracked newsletter subscriptions keyed by SHA-256 email hash."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Administrative and editorial role assignments."
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Append-only security audit trail."
+    }
+  }
+}

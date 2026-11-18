@@ -1,0 +1,6 @@
+{
+  "name": "Exponential Media Africa",
+  "description": "Integrated creative, marketing, media production, and education ecosystem in Nairobi, Kenya.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
