@@ -5,7 +5,6 @@ import {
   getDocs,
   orderBy,
   query,
-  serverTimestamp,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -35,9 +34,9 @@ import {
   DEFAULT_SITE_SETTINGS,
   DEFAULT_TEAM_MEMBERS,
   DEFAULT_TESTIMONIALS,
-  HERO_POSTER_IMAGE,
   PORTFOLIO_CATEGORIES,
 } from '../data/seedData';
+import { HERO_POSTER_IMAGE } from '../data/heroImage';
 import { db } from '../lib/firebase';
 import { OperationType, handleFirestoreError } from '../lib/firestore-errors';
 import { isSafeHttpOrLocalUrl, sanitizePlainText, sanitizeSlug } from '../lib/validation';
@@ -54,7 +53,7 @@ import type {
   ProjectInquiry,
   SiteSettings,
   TeamMember,
-  UserRole,
+  StaffRole,
 } from '../types/cms';
 
 type AdminTab =
@@ -69,13 +68,17 @@ type AdminTab =
   | 'architecture';
 
 export function AdminPage() {
-  const { user, role, authReady, isAuthorizedStaff, authError, signInWithGoogle, signOut } =
-    useAuth();
+  const {
+    user, role, authReady, isAuthorizedStaff, authError, signInWithGoogle,
+    mfaFactors, mfaSelectedFactorUid, mfaVerificationSent,
+    startMfaChallenge, completeMfaSignIn, cancelMfaChallenge, signOut,
+  } = useAuth();
   const { refreshPublicContent } = useCms();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('portfolio');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
 
   // CMS Data States
   const [cmsProjects, setCmsProjects] = useState<PortfolioProject[]>([]);
@@ -111,33 +114,9 @@ export function AdminPage() {
   const [newClientLogoUrl, setNewClientLogoUrl] = useState('');
 
   const [newUserUid, setNewUserUid] = useState('');
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserRole, setNewUserRole] = useState<UserRole>('EDITOR');
+  const [newUserRole, setNewUserRole] = useState<StaffRole>('editor');
 
-  const isAdmin = role === 'ADMIN';
-
-  const recordAudit = useCallback(
-    async (action: string, targetCollection: string, targetId: string, summary: string) => {
-      if (!user || !role) return;
-      try {
-        const logId = `log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        await setDoc(doc(db, 'audit_logs', logId), {
-          actorUid: user.uid,
-          actorEmail: user.email || 'unknown',
-          actorRole: role,
-          action,
-          targetCollection,
-          targetId,
-          summary: summary.slice(0, 290),
-          createdAt: serverTimestamp(),
-        });
-      } catch (err) {
-        console.warn('Audit log write failed:', err);
-      }
-    },
-    [user, role]
-  );
+  const isAdmin = role === 'admin';
 
   const loadAdminData = useCallback(async () => {
     if (!isAuthorizedStaff) return;
@@ -222,12 +201,6 @@ export function AdminPage() {
         }),
       ]);
 
-      await recordAudit(
-        'SEED_CMS_DEFAULTS',
-        'site_settings',
-        'main',
-        'Seeded initial verified Exponential Media Africa CMS collections'
-      );
       await loadAdminData();
       await refreshPublicContent();
       setStatusMessage('Initial CMS content successfully synchronized to Firestore.');
@@ -263,7 +236,6 @@ export function AdminPage() {
         isDeleted: false,
       };
       await setDoc(doc(db, 'portfolio_projects', id), payload);
-      await recordAudit('CREATE_PROJECT', 'portfolio_projects', id, `Created draft project: ${payload.title}`);
       setNewProjTitle('');
       setNewProjClient('');
       setNewProjSummary('');
@@ -277,19 +249,12 @@ export function AdminPage() {
   const toggleProjectStatus = async (project: PortfolioProject) => {
     const nextStatus: ContentStatus = project.status === 'published' ? 'draft' : 'published';
     await updateDoc(doc(db, 'portfolio_projects', project.id), { status: nextStatus });
-    await recordAudit('UPDATE_PROJECT_STATUS', 'portfolio_projects', project.id, `Set ${project.title} to ${nextStatus}`);
     await loadAdminData();
     await refreshPublicContent();
   };
 
   const softDeleteProject = async (project: PortfolioProject) => {
     await updateDoc(doc(db, 'portfolio_projects', project.id), { isDeleted: !project.isDeleted });
-    await recordAudit(
-      project.isDeleted ? 'RESTORE_PROJECT' : 'SOFT_DELETE_PROJECT',
-      'portfolio_projects',
-      project.id,
-      `${project.isDeleted ? 'Restored' : 'Soft-deleted'} ${project.title}`
-    );
     await loadAdminData();
     await refreshPublicContent();
   };
@@ -307,7 +272,7 @@ export function AdminPage() {
         excerpt: sanitizePlainText(newArtExcerpt),
         body: sanitizePlainText(newArtBody),
         authorName: user?.displayName || 'Exponential Editorial Team',
-        authorRole: role || 'EDITOR',
+        authorRole: role === 'admin' ? 'admin' : 'editor',
         publishedDate: new Date().toISOString().slice(0, 10),
         readTime: '4 min read',
         imageUrl: HERO_POSTER_IMAGE,
@@ -316,7 +281,6 @@ export function AdminPage() {
         isDeleted: false,
       };
       await setDoc(doc(db, 'articles', id), payload);
-      await recordAudit('CREATE_ARTICLE', 'articles', id, `Created draft article: ${payload.title}`);
       setNewArtTitle('');
       setNewArtExcerpt('');
       setNewArtBody('');
@@ -330,7 +294,6 @@ export function AdminPage() {
   const toggleArticleStatus = async (article: InsightArticle) => {
     const nextStatus: ContentStatus = article.status === 'published' ? 'draft' : 'published';
     await updateDoc(doc(db, 'articles', article.id), { status: nextStatus });
-    await recordAudit('UPDATE_ARTICLE_STATUS', 'articles', article.id, `Set ${article.title} to ${nextStatus}`);
     await loadAdminData();
     await refreshPublicContent();
   };
@@ -367,7 +330,6 @@ export function AdminPage() {
         payload.photoUrl = cleanPhoto.slice(0, 500);
       }
       await setDoc(doc(db, 'team_members', id), payload);
-      await recordAudit('CREATE_TEAM_MEMBER', 'team_members', id, `Created team draft: ${cleanName}`);
       setNewMemberName('');
       setNewMemberRole('');
       setNewMemberBio('');
@@ -382,19 +344,12 @@ export function AdminPage() {
   const toggleTeamMemberStatus = async (member: TeamMember) => {
     const nextStatus: ContentStatus = member.status === 'published' ? 'draft' : 'published';
     await updateDoc(doc(db, 'team_members', member.id), { status: nextStatus });
-    await recordAudit('UPDATE_TEAM_STATUS', 'team_members', member.id, `Set ${member.name} to ${nextStatus}`);
     await loadAdminData();
     await refreshPublicContent();
   };
 
   const softDeleteTeamMember = async (member: TeamMember) => {
     await updateDoc(doc(db, 'team_members', member.id), { isDeleted: !member.isDeleted });
-    await recordAudit(
-      member.isDeleted ? 'RESTORE_TEAM_MEMBER' : 'SOFT_DELETE_TEAM_MEMBER',
-      'team_members',
-      member.id,
-      `${member.isDeleted ? 'Restored' : 'Archived'} ${member.name}`
-    );
     await loadAdminData();
     await refreshPublicContent();
   };
@@ -431,7 +386,6 @@ export function AdminPage() {
         payload.logoUrl = cleanLogoUrl.slice(0, 500);
       }
       await setDoc(doc(db, 'client_logos', id), payload);
-      await recordAudit('CREATE_CLIENT_LOGO', 'client_logos', id, `Created client window draft: ${cleanName}`);
       setNewClientName('');
       setNewClientSector('');
       setNewClientRegion('');
@@ -446,19 +400,12 @@ export function AdminPage() {
   const toggleClientLogoStatus = async (logo: ClientLogo) => {
     const nextStatus: ContentStatus = logo.status === 'published' ? 'draft' : 'published';
     await updateDoc(doc(db, 'client_logos', logo.id), { status: nextStatus });
-    await recordAudit('UPDATE_CLIENT_LOGO_STATUS', 'client_logos', logo.id, `Set ${logo.name} to ${nextStatus}`);
     await loadAdminData();
     await refreshPublicContent();
   };
 
   const softDeleteClientLogo = async (logo: ClientLogo) => {
     await updateDoc(doc(db, 'client_logos', logo.id), { isDeleted: !logo.isDeleted });
-    await recordAudit(
-      logo.isDeleted ? 'RESTORE_CLIENT_LOGO' : 'SOFT_DELETE_CLIENT_LOGO',
-      'client_logos',
-      logo.id,
-      `${logo.isDeleted ? 'Restored' : 'Archived'} ${logo.name}`
-    );
     await loadAdminData();
     await refreshPublicContent();
   };
@@ -468,9 +415,24 @@ export function AdminPage() {
     nextStatus: ProjectInquiry['inquiryStatus']
   ) => {
     if (!isAdmin) return;
-    await updateDoc(doc(db, 'inquiries', inq.id), { inquiryStatus: nextStatus });
-    await recordAudit('UPDATE_INQUIRY_STATUS', 'inquiries', inq.id, `Updated ${inq.referenceCode} to ${nextStatus}`);
-    await loadAdminData();
+    if (!user) return;
+    setBusy(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/admin/inquiries/${encodeURIComponent(inq.id)}/status`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inquiryStatus: nextStatus }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || 'Inquiry status could not be updated.');
+      await loadAdminData();
+      setStatusMessage(`Inquiry ${inq.referenceCode} updated to ${nextStatus}.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Inquiry status could not be updated.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -482,7 +444,6 @@ export function AdminPage() {
         ...editableSettings,
         updatedAt: new Date().toISOString(),
       });
-      await recordAudit('UPDATE_SITE_SETTINGS', 'site_settings', 'main', 'Updated verified contact and impact configuration');
       await refreshPublicContent();
       setStatusMessage('Site settings updated and published.');
     } finally {
@@ -492,24 +453,45 @@ export function AdminPage() {
 
   const handleAssignUserRole = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin || !newUserUid.trim() || !newUserEmail.trim()) return;
+    if (!isAdmin || !newUserUid.trim() || !user) return;
     setBusy(true);
     try {
       const uid = sanitizePlainText(newUserUid);
-      await setDoc(doc(db, 'users', uid), {
-        uid,
-        email: sanitizePlainText(newUserEmail).toLowerCase(),
-        displayName: sanitizePlainText(newUserName || newUserEmail),
-        role: newUserRole,
-        active: true,
-        updatedAt: new Date().toISOString(),
+      const token = await user.getIdToken();
+      const response = await fetch('/api/admin/roles', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid, role: newUserRole }),
       });
-      await recordAudit('ASSIGN_USER_ROLE', 'users', uid, `Assigned ${newUserRole} to ${newUserEmail}`);
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || 'Role provisioning failed.');
       setNewUserUid('');
-      setNewUserEmail('');
-      setNewUserName('');
       await loadAdminData();
-      setStatusMessage(`Assigned ${newUserRole} role.`);
+      setStatusMessage(`Provisioned ${newUserRole} role for ${uid}.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Role provisioning failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRoleChange = async (target: AdminUserRecord, body: { role?: StaffRole; active?: boolean }) => {
+    if (!user) return;
+    setBusy(true);
+    setStatusMessage(null);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/admin/roles/${encodeURIComponent(target.id)}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || 'Role update failed.');
+      await loadAdminData();
+      setStatusMessage(`Updated access for ${target.email}.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Role update failed.');
     } finally {
       setBusy(false);
     }
@@ -544,12 +526,61 @@ export function AdminPage() {
             </div>
 
             {authError && (
-              <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-500/40 text-xs text-rose-200">
+              <div role="alert" className="p-3 rounded-lg bg-rose-950/60 border border-rose-500/40 text-xs text-rose-200">
                 {authError}
               </div>
             )}
 
-            {user ? (
+            {mfaFactors.length > 0 ? (
+              <div className="space-y-3 text-left">
+                <h2 className="text-sm font-semibold text-white">Complete two-step verification</h2>
+                <p className="text-xs leading-relaxed text-neutral-400">Choose an enrolled factor. Your code is verified by Firebase Authentication.</p>
+                <div className="grid gap-2">
+                  {mfaFactors.map((factor) => (
+                    <button
+                      key={factor.uid}
+                      type="button"
+                      onClick={() => void startMfaChallenge(factor.uid)}
+                      aria-pressed={mfaSelectedFactorUid === factor.uid}
+                      className="w-full rounded-lg border border-white/15 px-3 py-2 text-left text-sm text-white hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ED2126]"
+                    >
+                      {factor.kind === 'phone' ? 'Text message' : 'Authenticator app'} · {factor.label}
+                    </button>
+                  ))}
+                </div>
+                {mfaSelectedFactorUid && (
+                  <form
+                    className="space-y-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void completeMfaSignIn(mfaCode);
+                    }}
+                  >
+                    <label htmlFor="admin-mfa-code" className="block text-xs font-medium text-neutral-300">
+                      {mfaVerificationSent ? 'Verification code' : 'Authenticator code'}
+                    </label>
+                    <input
+                      id="admin-mfa-code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      pattern="[0-9]{6,8}"
+                      maxLength={8}
+                      required
+                      value={mfaCode}
+                      onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
+                      className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-center tracking-[0.3em] text-white"
+                    />
+                    <button type="submit" className="w-full rounded-lg bg-[#ED2126] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#D1191E]">
+                      Verify and continue
+                    </button>
+                  </form>
+                )}
+                <div id="admin-mfa-recaptcha" aria-hidden="true" />
+                <button type="button" onClick={cancelMfaChallenge} className="text-xs text-neutral-400 underline underline-offset-4">
+                  Cancel sign-in
+                </button>
+              </div>
+            ) : user ? (
               <div className="space-y-3">
                 <p className="text-xs text-neutral-400">
                   Signed in as <span className="text-white">{user.email}</span> (No staff role assigned)
@@ -1161,55 +1192,31 @@ export function AdminPage() {
             {/* Tab: Users & Roles (ADMIN ONLY) */}
             {activeTab === 'users' && isAdmin && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <form
-                  onSubmit={handleAssignUserRole}
-                  className="lg:col-span-5 p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-4 h-fit"
-                >
-                  <h2 className="text-lg font-display font-bold">
-                    Assign Staff Role (RBAC)
-                  </h2>
-                  <p className="text-xs text-neutral-400">
-                    Public registration is disabled. Administrators assign ADMIN or EDITOR permissions to verified Firebase Auth UIDs.
+                <div className="lg:col-span-5 p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-4 h-fit">
+                  <div>
+                    <h2 className="text-lg font-display font-bold">Provision staff access</h2>
+                    <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+                      Enter the Firebase UID of an existing enabled account with a verified email. The server retrieves account details and records the role change.
+                    </p>
+                  </div>
+                  <form onSubmit={handleAssignUserRole} className="space-y-3">
+                    <label className="block text-xs text-neutral-300">
+                      Firebase user ID
+                      <input value={newUserUid} onChange={(event) => setNewUserUid(event.target.value)} required maxLength={128} className="mt-1 w-full px-3 py-2 bg-[#0B0B0D] border border-white/15 rounded-md" />
+                    </label>
+                    <label className="block text-xs text-neutral-300">
+                      Role
+                      <select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value as StaffRole)} className="mt-1 w-full px-3 py-2 bg-[#0B0B0D] border border-white/15 rounded-md">
+                        <option value="editor">Editor</option>
+                        <option value="admin">Administrator</option>
+                      </select>
+                    </label>
+                    <button type="submit" disabled={busy} className="px-4 py-2 text-xs font-semibold bg-[#ED2126] disabled:opacity-50 rounded-md">Provision role</button>
+                  </form>
+                  <p className="text-[11px] text-neutral-500 leading-relaxed">
+                    Initial administrator access must be established using the documented ADC bootstrap command. Administrators cannot modify their own access or remove the last active administrator.
                   </p>
-                  <input
-                    type="text"
-                    required
-                    value={newUserUid}
-                    onChange={(e) => setNewUserUid(e.target.value)}
-                    placeholder="Firebase Auth UID"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white font-mono"
-                  />
-                  <input
-                    type="email"
-                    required
-                    value={newUserEmail}
-                    onChange={(e) => setNewUserEmail(e.target.value)}
-                    placeholder="Staff Google email"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
-                  />
-                  <input
-                    type="text"
-                    value={newUserName}
-                    onChange={(e) => setNewUserName(e.target.value)}
-                    placeholder="Display name"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
-                  />
-                  <select
-                    value={newUserRole}
-                    onChange={(e) => setNewUserRole(e.target.value as UserRole)}
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
-                  >
-                    <option value="EDITOR">EDITOR (Content &amp; Portfolio only)</option>
-                    <option value="ADMIN">ADMIN (Full access incl. Inquiries &amp; Settings)</option>
-                  </select>
-                  <button
-                    type="submit"
-                    disabled={busy}
-                    className="w-full py-2.5 text-xs font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg"
-                  >
-                    Save Staff Role
-                  </button>
-                </form>
+                </div>
 
                 <div className="lg:col-span-7 space-y-3">
                   {adminUsers.map((u) => (
@@ -1220,10 +1227,29 @@ export function AdminPage() {
                       <div>
                         <div className="text-sm font-semibold text-white">{u.displayName}</div>
                         <div className="text-xs text-neutral-400">
-                          {u.email} · {u.role}
+                          {u.email} · {u.role} · {u.active ? 'Active' : 'Inactive'}
                         </div>
                       </div>
-                      <span className="font-mono text-xs text-neutral-500">{u.id}</span>
+                      <div className="flex items-center gap-2">
+                        <select
+                          aria-label={`Role for ${u.email}`}
+                          value={u.role}
+                          disabled={busy || u.id === user?.uid}
+                          onChange={(event) => void handleRoleChange(u, { role: event.target.value as StaffRole })}
+                          className="px-2 py-1 text-xs bg-[#0B0B0D] border border-white/15 rounded"
+                        >
+                          <option value="editor">Editor</option>
+                          <option value="admin">Administrator</option>
+                        </select>
+                        <button
+                          type="button"
+                          disabled={busy || u.id === user?.uid}
+                          onClick={() => void handleRoleChange(u, { active: !u.active })}
+                          className="px-2.5 py-1 text-xs border border-white/15 disabled:opacity-40 rounded"
+                        >
+                          {u.active ? 'Deactivate' : 'Reactivate'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1233,9 +1259,8 @@ export function AdminPage() {
             {/* Tab: Audit Logs (ADMIN ONLY) */}
             {activeTab === 'audit' && isAdmin && (
               <div className="space-y-3">
-                <h2 className="text-xl font-display font-bold">
-                  Immutable Security &amp; CMS Audit Trail
-                </h2>
+                <h2 className="text-xl font-display font-bold">Server-recorded administrative events</h2>
+                <p className="text-xs text-neutral-400">Role provisioning and inquiry status changes are recorded by trusted server transactions.</p>
                 {auditLogs.length === 0 ? (
                   <div className="p-8 bg-[#141418] border border-white/10 rounded-2xl text-sm text-neutral-400">
                     No audit records recorded yet.
@@ -1250,6 +1275,7 @@ export function AdminPage() {
                           <th className="py-3 px-4">Action</th>
                           <th className="py-3 px-4">Target</th>
                           <th className="py-3 px-4">Summary</th>
+                          <th className="py-3 px-4">Outcome</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/10">
@@ -1262,6 +1288,7 @@ export function AdminPage() {
                               {log.targetCollection}/{log.targetId}
                             </td>
                             <td className="py-3 px-4 text-neutral-300">{log.summary}</td>
+                            <td className="py-3 px-4">{log.outcome || 'Recorded'}</td>
                           </tr>
                         ))}
                       </tbody>
