@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth';
 import {
+  connectFirestoreEmulator,
   doc,
   getDocFromServer,
   getFirestore,
@@ -9,7 +10,12 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+// Local emulator runs point at demo services; production uses the configured project.
+const useEmulators = import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true';
+const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId;
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId;
+
+const app = initializeApp({ ...firebaseConfig, projectId });
 
 function createFirestoreInstance(): Firestore {
   try {
@@ -18,16 +24,29 @@ function createFirestoreInstance(): Firestore {
       typeof window !== 'undefined'
         ? { experimentalAutoDetectLongPolling: true }
         : {},
-      firebaseConfig.firestoreDatabaseId
+      firestoreDatabaseId
     );
   } catch {
-    return getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    return getFirestore(app, firestoreDatabaseId);
   }
 }
 
 export const db = createFirestoreInstance();
 export const auth = getAuth(app);
 export const googleAuthProvider = new GoogleAuthProvider();
+
+if (useEmulators && typeof window !== 'undefined') {
+  connectAuthEmulator(
+    auth,
+    import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL || 'http://127.0.0.1:9099',
+    { disableWarnings: true }
+  );
+  connectFirestoreEmulator(
+    db,
+    import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_HOST || '127.0.0.1',
+    Number(import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_PORT) || 8080
+  );
+}
 
 export async function verifyFirestoreConnection(): Promise<boolean> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
