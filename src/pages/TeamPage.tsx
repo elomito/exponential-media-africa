@@ -3,7 +3,8 @@ import { ArrowRight, Users } from 'lucide-react';
 import { OptimizedImage } from '../components/OptimizedImage';
 import { SeoHead } from '../components/SeoHead';
 import { useCms } from '../context/CmsContext';
-import { CORE_VALUES, DIVISIONS, HERO_POSTER_IMAGE } from '../data/seedData';
+import { CORE_VALUES, DIVISIONS } from '../data/seedData';
+import { HERO_POSTER_IMAGE } from '../data/heroImage';
 
 interface TeamPageProps {
   onNavigate: (path: string) => void;
@@ -24,12 +25,12 @@ export function TeamPage({ onNavigate, onOpenInquiry }: TeamPageProps) {
       />
 
       {/* Header */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 border-b border-white/10">
-        <div className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold tracking-wide text-[#FF1A1F] mb-3">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-16 border-b border-white/10">
+        <div className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold tracking-[0.14em] uppercase text-[#FF1A1F] mb-4">
           <Users className="w-4 h-4 text-[#FF1A1F]" aria-hidden="true" />
           <span>Team &amp; Practice Culture</span>
         </div>
-        <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight max-w-4xl [text-wrap:balance] mb-6">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.04] max-w-4xl [text-wrap:balance] mb-5 sm:mb-6">
           Multidisciplinary specialists under one Nairobi roof.
         </h1>
         <p className="text-lg text-neutral-300 max-w-2xl leading-relaxed">
@@ -41,12 +42,12 @@ export function TeamPage({ onNavigate, onOpenInquiry }: TeamPageProps) {
       {teamMembers.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 border-b border-white/10">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {teamMembers.map((member) => (
+            {teamMembers.map((member, index) => (
               <article
                 key={member.id}
-                className="group flex flex-col bg-[#141418] border border-white/10 hover:border-white/25 rounded-2xl overflow-hidden transition-colors"
+                className="group flex flex-col border-t border-white/20 hover:border-[#ED2126] transition-colors"
               >
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#08080A]">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#08080A]">
                   <OptimizedImage
                     src={member.photoUrl || HERO_POSTER_IMAGE}
                     alt={`${member.name} — ${member.role}`}
@@ -56,10 +57,10 @@ export function TeamPage({ onNavigate, onOpenInquiry }: TeamPageProps) {
                     className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
                   />
                 </div>
-                <div className="p-6 flex-1 flex flex-col justify-between gap-4">
+                <div className="pt-5 pb-7 flex-1 flex flex-col justify-between gap-4">
                   <div>
-                    <div className="text-xs font-bold text-[#FF1A1F] mb-1">
-                      {member.role}
+                    <div className="font-mono text-[10px] tracking-[0.14em] text-[#FF3A3F] mb-2">
+                      {String(index + 1).padStart(2, '0')} / {member.role.toUpperCase()}
                     </div>
                     <h2 className="text-xl font-display font-bold text-white tracking-tight mb-1">
                       {member.name}

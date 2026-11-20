@@ -3,7 +3,8 @@ import { ArrowRight } from 'lucide-react';
 import { OptimizedImage } from '../components/OptimizedImage';
 import { SeoHead } from '../components/SeoHead';
 import { useCms } from '../context/CmsContext';
-import { CORE_VALUES, HERO_POSTER_IMAGE, TERRITORY_MARKETS } from '../data/seedData';
+import { CORE_VALUES, TERRITORY_MARKETS } from '../data/seedData';
+import { HERO_POSTER_IMAGE } from '../data/heroImage';
 
 interface AboutPageProps {
   onNavigate: (path: string) => void;
@@ -22,12 +23,12 @@ export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
       />
 
       {/* Header */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 border-b border-white/10">
-        <p className="inline-flex items-center gap-2.5 text-xs sm:text-sm font-bold tracking-wide text-[#FF1A1F] mb-3">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-16 border-b border-white/10">
+        <p className="inline-flex items-center gap-2.5 text-xs sm:text-sm font-bold tracking-[0.14em] uppercase text-[#FF1A1F] mb-4">
           <span className="w-5 h-0.5 bg-[#FF1A1F]" aria-hidden="true" />
           <span>About Exponential Media Africa</span>
         </p>
-        <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight max-w-4xl [text-wrap:balance] mb-6">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.04] max-w-4xl [text-wrap:balance] mb-5 sm:mb-6">
           Imaginative Solutions for Exponential Growth.
         </h1>
         <p className="text-lg text-neutral-300 max-w-2xl leading-relaxed">
@@ -37,7 +38,7 @@ export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
 
       {/* Story & Visual */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 border-b border-white/10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           <div className="lg:col-span-6 space-y-6">
             <h2 className="text-3xl font-display font-bold tracking-tight">Who We Are</h2>
             <p className="text-base text-neutral-300 leading-relaxed">
@@ -57,7 +58,7 @@ export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
               </button>
             </div>
           </div>
-          <div className="lg:col-span-6 min-h-[300px]">
+          <div className="lg:col-span-6 aspect-[4/3] lg:aspect-[5/4]">
             <OptimizedImage
               src={HERO_POSTER_IMAGE}
               alt="Exponential Media Africa commercial content production setup in Nairobi"
@@ -73,7 +74,7 @@ export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
       {/* Vision & Mission */}
       <section className="bg-[#F8F8F7] text-[#111114] py-16 md:py-24 border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="p-8 bg-white border border-neutral-200 border-t-4 border-t-[#ED2126] rounded-2xl">
+          <div className="py-6 sm:py-8 pr-4 sm:pr-8 border-t-2 border-[#ED2126]">
             <div className="font-mono text-xs font-bold text-[#E50000] mb-3">01 · OUR VISION</div>
             <h2 className="text-2xl font-display font-bold tracking-tight mb-4">
               Africa&apos;s benchmark creative media agency.
@@ -82,7 +83,7 @@ export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
               To become the leading creative media agency in Africa through knowledge, technology, and exemplary culture.
             </p>
           </div>
-          <div className="p-8 bg-white border border-neutral-200 border-t-4 border-t-[#ED2126] rounded-2xl">
+          <div className="py-6 sm:py-8 pr-4 sm:pr-8 border-t-2 border-neutral-300">
             <div className="font-mono text-xs font-bold text-[#E50000] mb-3">02 · OUR MISSION</div>
             <h2 className="text-2xl font-display font-bold tracking-tight mb-4">
               Helping brands stand out in the digital age.
@@ -109,11 +110,11 @@ export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-7">
           {CORE_VALUES.map((val) => (
             <div
               key={val.id}
-              className="p-6 bg-[#141418] border border-white/10 border-t-2 border-t-[#ED2126] rounded-xl space-y-3"
+              className="py-6 border-t border-white/20 space-y-3"
             >
               <div className="font-mono text-xs font-bold text-[#FF1A1F] tabular-nums">
                 {val.letter} · {val.index}
