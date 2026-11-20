@@ -56,7 +56,7 @@ export function LegalPage({ mode }: LegalPageProps) {
                   <strong>Project Inquiries:</strong> Full name, business email, company name, telephone number, industry, selected services, estimated budget, project timeline, and project brief.
                 </li>
                 <li>
-                  <strong>Newsletter Subscriptions:</strong> Email address and explicit opt-in consent timestamp.
+                  <strong>Newsletter:</strong> Sign-up is currently disabled; this website is not accepting new mailing-list subscriptions.
                 </li>
               </ul>
             </section>
@@ -66,7 +66,7 @@ export function LegalPage({ mode }: LegalPageProps) {
                 3. Restricted Access &amp; Security
               </h2>
               <p>
-                Submitted inquiry records and subscriber lists are strictly inaccessible to the public. Only authorised administrators with verified accounts can review inquiries. All submissions are validated on the server and protected by role-based access rules.
+                Inquiry records are restricted to authorised administrators and are not available to public visitors. Inquiry submissions are validated by the server before storage. Newsletter enrollment is disabled.
               </p>
             </section>
 
@@ -75,7 +75,7 @@ export function LegalPage({ mode }: LegalPageProps) {
                 4. Retention, Unsubscribe &amp; Deletion Rights
               </h2>
               <p>
-                Project inquiry data is retained only as long as reasonably necessary to respond to commercial proposals or maintain active client records (maximum default review cycle of 24 months for unactioned inquiries). Newsletter subscribers may unsubscribe at any time using their unsubscribe token in the website footer or by emailing{' '}
+                Project inquiry data is retained only as long as reasonably necessary to respond to commercial proposals or maintain active client records (maximum default review cycle of 24 months for unactioned inquiries). For mailing-list removal requests, contact{' '}
                 <a href={`mailto:${settings.email}`} className="text-[#FF1A1F] hover:text-white underline">
                   {settings.email}
                 </a>{' '}

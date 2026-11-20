@@ -39,16 +39,16 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
         path="/contact"
       />
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-14 border-b border-white/10">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-14 border-b border-white/10">
         <p className="inline-flex items-center gap-2.5 text-xs font-semibold tracking-wide text-[#FF1A1F] mb-3">
           <span className="w-5 h-0.5 bg-[#ED2126]" aria-hidden="true" />
           <span>Contact Us</span>
         </p>
-        <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight max-w-4xl [text-wrap:balance] mb-6">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.04] max-w-4xl [text-wrap:balance] mb-5 sm:mb-6">
           Start a conversation with our Nairobi team.
         </h1>
         <p className="text-lg text-neutral-300 max-w-2xl leading-relaxed">
-          Visit or reach our Kilimani headquarters at A3-10 Casamia, Ngong Road, or submit a structured project brief below for a confidential business development response.
+          Reach our Nairobi team directly by phone, email or WhatsApp. Online project brief submission is temporarily paused while secure server-side recording is completed.
         </p>
       </section>
 
@@ -153,7 +153,7 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
                 Smart Project Inquiry Brief
               </h2>
               <p className="text-sm text-neutral-400">
-                Select one or more required services across our practice areas and receive an instant reference code.
+                Use the brief below to organize your project details. Online submission is paused; your information will not be sent or stored when you submit.
               </p>
             </div>
             <ProjectInquiryForm onNavigate={onNavigate} />
@@ -161,7 +161,7 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
         </div>
 
         {/* Interactive Google Maps Office Locator */}
-        <div className="mt-12 p-6 sm:p-8 bg-[#141418] border border-white/10 rounded-2xl space-y-5">
+        <div className="mt-12 p-5 sm:p-8 bg-[#141418] border border-white/10 rounded-2xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pb-4 border-b border-white/10">
             <div>
               <p className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#FF1A1F] mb-1">
