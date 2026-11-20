@@ -1,4 +1,3 @@
-import heroNairobiImg from '../assets/images/hero_nairobi_production_1794567084135.jpg';
 import type {
   ClientLogo,
   DivisionMeta,
@@ -10,25 +9,13 @@ import type {
   TeamMember,
   TestimonialItem,
 } from '../types/cms';
-
-export const HERO_POSTER_IMAGE = heroNairobiImg;
+import { VERIFIED_CONTACT } from './verifiedContact';
+export { VERIFIED_CONTACT } from './verifiedContact';
+export type { VerifiedContact } from './verifiedContact';
 
 export const OFFICIAL_BRAND_ASSETS = {
   markUrl: '/assets/profile/brand/exp-mark.png',
   darkLockupUrl: '/assets/profile/brand/exp-logo-dark.png',
-};
-
-export const VERIFIED_CONTACT = {
-  companyName: 'Exponential Media Africa',
-  tagline: 'Imaginative Solutions for Exponential Growth.',
-  email: 'info@exponentialmedia.africa',
-  primaryPhone: '+254 728 231 221',
-  primaryPhoneHref: 'tel:+254728231221',
-  secondaryPhone: '+254 728 232 723',
-  secondaryPhoneHref: 'tel:+254728232723',
-  whatsappUrl:
-    'https://wa.me/254728231221?text=Hello%20Exponential%20Media%20Africa%2C%20I%20would%20like%20to%20discuss%20a%20project%20brief.',
-  headquartersAddress: 'A3-10 Casamia, Ngong Road, Kilimani, Nairobi, Kenya',
 };
 
 export const TERRITORY_MARKETS = [
@@ -327,202 +314,7 @@ export const DEFAULT_SERVICES: ServiceItem[] = [
   },
 ];
 
-export const PROJECT_SUPPLEMENTAL_MEDIA: Record<
-  string,
-  {
-    creators?: string[];
-    market?: string;
-    gallery: Array<{ imageUrl: string; caption: string }>;
-  }
-> = {
-  'pepsi-kenya-market-entry-influencer-campaign': {
-    market: 'Kenya',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/pepsi-kenya-entry.jpg',
-        caption: 'Pepsi strategic collaboration with Pizza Inn & Chicken Inn in Kenya',
-      },
-      {
-        imageUrl: '/assets/profile/work/pepsi-creators-row.jpg',
-        caption: 'Featured creators driving Kenyan market-entry launch content',
-      },
-    ],
-  },
-  'ocean-basket-westgate-influencer-engagement': {
-    market: 'Nairobi, Kenya',
-    creators: ['Royal Vee', 'Cera Imani', 'Nimrat Channa', 'Nadia Albana'],
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/ocean-basket-westgate.jpg',
-        caption: 'Signature seafood dining showcase for Ocean Basket Westgate Mall',
-      },
-      {
-        imageUrl: '/assets/profile/work/ocean-basket-creators.jpg',
-        caption: 'Creator partners: Royal Vee, Cera Imani, Nimrat Channa & Nadia Albana',
-      },
-    ],
-  },
-  'grill-shack-lifestyle-food-influencer-campaigns': {
-    market: 'Nairobi, Kenya',
-    creators: ['Sue Owino', 'Rita Kimwemwe', 'Leilah Watts', 'Naomi Kuria'],
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/grill-shack-dining.jpg',
-        caption: 'Steaks, ribs, and burgers positioning for The Grill Shack',
-      },
-      {
-        imageUrl: '/assets/profile/work/grill-shack-creators.jpg',
-        caption: 'Lifestyle & food creators: Sue Owino, Rita Kimwemwe, Leilah Watts & Naomi Kuria',
-      },
-    ],
-  },
-  'marhaba-stop-and-shop-shell-select-retail-campaigns': {
-    market: 'Kenya',
-    creators: ['Krisbabyy', 'Joy Mwendwa', 'Flossy Trukid', 'Malu'],
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/retail-select-marhaba.jpg',
-        caption: 'In-store promotional awareness across Shell Select, Stop & Shop, and Marhaba',
-      },
-      {
-        imageUrl: '/assets/profile/work/retail-select-creators.jpg',
-        caption: 'Campaign creators: Krisbabyy, Joy Mwendwa, Flossy Trukid & Malu',
-      },
-    ],
-  },
-  'galitos-launch-sauce-sampling-activations': {
-    market: 'Narok, Waiyaki Way & BBS Mall, Kenya',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/galitos-waiyaki-way.jpg',
-        caption: "Galito's Waiyaki Way opening experiential activation",
-      },
-      {
-        imageUrl: '/assets/profile/work/galitos-narok-launch-1.jpg',
-        caption: "Galito's Narok branch launch roadshow & flyer outreach",
-      },
-      {
-        imageUrl: '/assets/profile/work/galitos-narok-launch-2.jpg',
-        caption: "Galito's Narok team engaging local customers",
-      },
-      {
-        imageUrl: '/assets/profile/work/galitos-sauce-sampling-1.jpg',
-        caption: "Galito's BBS Mall interactive sauce tasting station",
-      },
-      {
-        imageUrl: '/assets/profile/work/galitos-sauce-sampling-2.jpg',
-        caption: 'On-ground product sampling tour with brand ambassadors',
-      },
-    ],
-  },
-  'chicken-inn-retail-events-mall-activations': {
-    market: 'Nairobi (BBS Mall, Lucky Summer & Retail Locations)',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/chicken-inn-bbs-mall-1.jpg',
-        caption: 'Chicken Inn BBS Mall in-store brand activation & flyer engagement',
-      },
-      {
-        imageUrl: '/assets/profile/work/chicken-inn-bbs-mall-2.jpg',
-        caption: 'Shopper interaction during BBS Mall promotional campaign',
-      },
-      {
-        imageUrl: '/assets/profile/work/chicken-inn-valentines.jpg',
-        caption: "Chicken Inn Valentine's Day seasonal brand activation",
-      },
-      {
-        imageUrl: '/assets/profile/work/chicken-inn-lucky-summer.jpg',
-        caption: 'Lucky Summer branch opening activation',
-      },
-      {
-        imageUrl: '/assets/profile/work/chicken-inn-champs.jpg',
-        caption: 'Chicken Inn Champs semi-finals fan experience & activation',
-      },
-    ],
-  },
-  'pizza-inn-galitos-gtc-mall-nakuru-launches': {
-    market: 'GTC Mall (Nairobi) & Basic 58 (Nakuru), Kenya',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/pizza-galitos-gtc-mall.jpg',
-        caption: "Pizza Inn & Galito's joint GTC Mall opening activation",
-      },
-      {
-        imageUrl: '/assets/profile/work/nakuru-basic58-launch.jpg',
-        caption: 'Basic 58 Nakuru grand launch activation & crowd engagement',
-      },
-    ],
-  },
-  'kcb-corporate-event-management': {
-    market: 'Kenya',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/kcb-event-1.jpg',
-        caption: 'KCB branded registration booth & hospitality team',
-      },
-      {
-        imageUrl: '/assets/profile/work/kcb-event-2.jpg',
-        caption: 'On-site event signage, logistics, and brand ambassador coordination',
-      },
-    ],
-  },
-  'digital-paperboy-and-schoolbooks-identity-systems': {
-    market: 'Kenya',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/digital-paperboy-identity.jpg',
-        caption: 'Digital Paperboy logo grid, Mountella typography, and color palette system',
-      },
-      {
-        imageUrl: '/assets/profile/work/schoolbooks-identity.jpg',
-        caption: 'Schoolbooks modular logo system, Prussian Blue & Wiki Green palette specification',
-      },
-    ],
-  },
-  'toyworld-kenya-styroplast-social-media-management': {
-    market: 'Kenya',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/toyworld-social-showcase.jpg',
-        caption: 'ToyWorld Kenya social media grid and promotional campaign graphics',
-      },
-      {
-        imageUrl: '/assets/profile/work/styroplast-social-showcase.jpg',
-        caption: 'Styroplast Group Instagram feed layout and product series creatives',
-      },
-      {
-        imageUrl: '/assets/profile/work/promotional-posts-grid.jpg',
-        caption: 'Multi-client promotional post graphics (Friends of Creation, AceMed, Staybooked, Dalili & partners)',
-      },
-    ],
-  },
-  'print-design-and-promotional-collateral-showcase': {
-    market: 'Kenya',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/print-design-showcase.jpg',
-        caption: 'Company profiles and exhibition roll-up banners (Computer Pride, Panari Resort Nyahururu, Flashbase, Friends of Creation, Uptown Radio)',
-      },
-      {
-        imageUrl: '/assets/profile/work/promotional-posts-grid.jpg',
-        caption: 'Digital promotional post layouts across hospitality, healthcare, tours, and education',
-      },
-    ],
-  },
-  'content-creation-tecno-big5-qsr-production': {
-    market: 'Kenya',
-    gallery: [
-      {
-        imageUrl: '/assets/profile/work/content-studio-chair.jpg',
-        caption: 'Commercial photography and videography concept-to-production creative direction',
-      },
-      {
-        imageUrl: '/assets/profile/work/visual-design-studio.jpg',
-        caption: 'Post-production editing, color grading, and multi-platform campaign assembly',
-      },
-    ],
-  },
-};
+export { PROJECT_SUPPLEMENTAL_MEDIA } from './projectSupplementalMedia';
 
 export const DEFAULT_PORTFOLIO_PROJECTS: PortfolioProject[] = [
   {
