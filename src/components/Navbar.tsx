@@ -65,7 +65,7 @@ export function Navbar({ currentPath, onNavigate, onOpenInquiry }: NavbarProps) 
           : 'bg-[#0B0B0D]/80 backdrop-blur-sm border-b border-white/5'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-[4.5rem] flex items-center justify-between gap-3 sm:gap-6">
         {/* Single-element Brand Wordmark */}
         <a
           href="/"
@@ -230,6 +230,7 @@ export function Navbar({ currentPath, onNavigate, onOpenInquiry }: NavbarProps) 
             onClick={() => setMobileOpen((prev) => !prev)}
             aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={mobileOpen}
+            aria-controls="mobile-primary-navigation"
             className="lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-lg border border-white/15 text-white hover:bg-white/10 transition-colors"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -239,10 +240,11 @@ export function Navbar({ currentPath, onNavigate, onOpenInquiry }: NavbarProps) 
 
       {/* Mobile Navigation Drawer */}
       {mobileOpen && (
-        <div className="lg:hidden bg-[#0B0B0D] border-t border-white/10 px-4 py-6 space-y-2 max-h-[82vh] overflow-y-auto">
+        <div id="mobile-primary-navigation" className="lg:hidden bg-[#0B0B0D] border-t border-white/10 px-4 py-4 sm:py-6 space-y-2 max-h-[calc(100svh-4rem)] overflow-y-auto overscroll-contain">
           <nav aria-label="Mobile Navigation" className="space-y-1">
             <a
               href="/"
+              aria-current={isActive('/') ? 'page' : undefined}
               onClick={(e) => {
                 e.preventDefault();
                 handleLinkClick('/');
@@ -255,6 +257,7 @@ export function Navbar({ currentPath, onNavigate, onOpenInquiry }: NavbarProps) 
             </a>
             <a
               href="/about"
+              aria-current={isActive('/about') ? 'page' : undefined}
               onClick={(e) => {
                 e.preventDefault();
                 handleLinkClick('/about');
@@ -267,6 +270,7 @@ export function Navbar({ currentPath, onNavigate, onOpenInquiry }: NavbarProps) 
             </a>
             <a
               href="/services"
+              aria-current={isActive('/services') ? 'page' : undefined}
               onClick={(e) => {
                 e.preventDefault();
                 handleLinkClick('/services');
@@ -306,6 +310,7 @@ export function Navbar({ currentPath, onNavigate, onOpenInquiry }: NavbarProps) 
               <a
                 key={item.path}
                 href={item.path}
+                aria-current={isActive(item.path) ? 'page' : undefined}
                 onClick={(e) => {
                   e.preventDefault();
                   handleLinkClick(item.path);
