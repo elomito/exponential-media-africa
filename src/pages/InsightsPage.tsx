@@ -49,18 +49,18 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
         path="/insights"
       />
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-14 border-b border-white/10">
-        <p className="inline-flex items-center gap-2.5 text-xs font-semibold tracking-wide text-[#FF1A1F] mb-3">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-14 border-b border-white/10">
+        <p className="inline-flex items-center gap-2.5 text-xs font-semibold tracking-[0.14em] uppercase text-[#FF1A1F] mb-4">
           <span className="w-5 h-0.5 bg-[#ED2126]" aria-hidden="true" />
           <span>Insights &amp; Publications</span>
         </p>
-        <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight max-w-4xl [text-wrap:balance] mb-8">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight max-w-4xl leading-[1.04] [text-wrap:balance] mb-6 sm:mb-8">
           Perspectives on African brands, studios, and growth.
         </h1>
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div
-            role="tablist"
+            role="group"
             aria-label="Filter articles by category"
             className="flex flex-wrap gap-1.5 p-1.5 bg-[#141418] border border-white/10 rounded-xl"
           >
@@ -68,8 +68,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
               <button
                 key={cat}
                 type="button"
-                role="tab"
-                aria-selected={selectedCategory === cat}
+                aria-pressed={selectedCategory === cat}
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-3.5 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                   selectedCategory === cat
@@ -107,8 +106,8 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
 
         {/* Featured Spotlight */}
         {featuredArticle && selectedCategory === 'All' && !searchQuery && (
-          <article className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-[#141418] border border-white/10 rounded-2xl overflow-hidden items-stretch">
-            <div className="lg:col-span-6 min-h-[280px]">
+          <article className="grid grid-cols-1 lg:grid-cols-12 gap-0 border-y border-white/20 overflow-hidden items-stretch">
+            <div className="lg:col-span-7 aspect-[4/3] lg:aspect-auto lg:min-h-[420px]">
               <OptimizedImage
                 src={featuredArticle.imageUrl}
                 alt={featuredArticle.title}
@@ -119,9 +118,9 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="lg:col-span-6 p-8 sm:p-10 flex flex-col justify-between">
+            <div className="lg:col-span-5 py-7 sm:py-10 lg:pl-10 flex flex-col justify-between">
               <div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400 mb-3">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-neutral-400 mb-5">
                   <span className="text-[#FF1A1F] font-semibold">Featured</span>
                   <span aria-hidden="true">·</span>
                   <span>{featuredArticle.category}</span>
@@ -132,10 +131,10 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
                   <span aria-hidden="true">·</span>
                   <span>{featuredArticle.readTime}</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight mb-4">
+                <h2 className="text-3xl sm:text-4xl font-display font-bold text-white tracking-[-0.035em] leading-[1.04] mb-5">
                   {featuredArticle.title}
                 </h2>
-                <p className="text-sm sm:text-base text-neutral-300 leading-relaxed mb-6">
+                <p className="text-base sm:text-lg text-neutral-300 leading-relaxed mb-7">
                   {featuredArticle.excerpt}
                 </p>
               </div>
@@ -176,45 +175,47 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredArticles.map((article) => (
+          <div className="divide-y divide-white/15 border-y border-white/15">
+            {filteredArticles.map((article, index) => (
               <article
                 key={article.id}
-                className="group bg-[#141418] border border-white/10 border-t-2 border-t-[#ED2126] rounded-2xl overflow-hidden hover:border-[#ED2126] transition-colors flex flex-col"
+                className="group"
               >
                 <button
                   type="button"
                   onClick={() => onNavigate(`/insights/${article.slug}`)}
-                  className="text-left flex-1 flex flex-col"
+                  className="text-left w-full flex flex-col sm:flex-row gap-5 sm:gap-8 py-6 sm:py-8"
                 >
-                  <div className="h-52 w-full overflow-hidden">
+                  <div className="aspect-[16/10] w-full sm:w-[34%] sm:shrink-0 overflow-hidden bg-[#141418]">
                     <OptimizedImage
                       src={article.imageUrl}
                       alt={article.title}
                       width={720}
                       height={480}
                       containerClassName="w-full h-full"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.025] motion-reduce:transform-none"
                     />
                   </div>
-                  <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div className="flex-1 flex flex-col justify-center">
                     <div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-neutral-400 mb-3">
+                        <span className="font-mono text-neutral-500">{String(index + 1).padStart(2, '0')}</span>
+                        <span aria-hidden="true">/</span>
                         <span className="text-[#FF1A1F] font-semibold">{article.category}</span>
                         <span aria-hidden="true">·</span>
                         <time dateTime={article.publishedDate}>{article.publishedDate}</time>
                         <span aria-hidden="true">·</span>
                         <span>{article.readTime}</span>
                       </div>
-                      <h3 className="text-lg font-display font-bold text-white tracking-tight mb-2 group-hover:text-[#FF1A1F] transition-colors">
+                      <h3 className="text-xl sm:text-2xl font-display font-bold text-white tracking-tight mb-3 group-hover:text-[#FF1A1F] transition-colors">
                         {article.title}
                       </h3>
                       <p className="text-sm text-neutral-300 leading-relaxed line-clamp-3">
                         {article.excerpt}
                       </p>
                     </div>
-                    <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between text-xs text-neutral-400">
-                      <span>{article.authorName}</span>
+                    <div className="pt-4 mt-5 flex items-center justify-between text-xs text-neutral-400">
+                      <span>{article.authorName} · {article.authorRole}</span>
                       <ArrowUpRight className="w-4 h-4 text-[#ED2126]" />
                     </div>
                   </div>

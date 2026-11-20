@@ -59,7 +59,7 @@ export function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
         }}
       />
 
-      <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <article className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-20">
         <button
           type="button"
           onClick={() => onNavigate('/insights')}
@@ -77,17 +77,17 @@ export function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
           <span>{article.readTime}</span>
         </div>
 
-        <h1 className="text-3xl sm:text-5xl font-display font-bold tracking-tight [text-wrap:balance] mb-6">
+        <h1 className="text-3xl sm:text-4xl lg:text-6xl font-display font-bold tracking-[-0.04em] leading-[1.02] [text-wrap:balance] max-w-4xl mb-6">
           {article.title}
         </h1>
 
-        <div className="pb-8 mb-8 border-b border-white/10 text-sm text-neutral-300">
+        <div className="pb-6 mb-7 border-b border-white/10 text-sm text-neutral-300">
           By <span className="font-semibold text-white">{article.authorName}</span>
           {' · '}
           <span className="text-neutral-400">{article.authorRole}</span>
         </div>
 
-        <div className="rounded-2xl overflow-hidden border border-white/10 mb-10 max-h-[460px]">
+        <div className="overflow-hidden border-y border-white/10 mb-8 sm:mb-12 aspect-[16/9] max-h-[560px] bg-[#141418]">
           <OptimizedImage
             src={article.imageUrl}
             alt={article.title}
