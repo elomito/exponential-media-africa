@@ -23,24 +23,44 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.email_verified == true;
     }
 
-    function isBootstrappedAdmin() {
-      return isSignedIn() && request.auth.token.email == 'kevinnambubbi@gmail.com';
+    function isMfaSignedIn() {
+      return isSignedIn()
+        && ('firebase' in request.auth.token)
+        && ('sign_in_second_factor' in request.auth.token.firebase)
+        && request.auth.token.firebase.sign_in_second_factor is string
+        && request.auth.token.firebase.sign_in_second_factor.size() > 0;
     }
 
     function userDocPath() {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
+    function isValidRoleRecord(userId, data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'active', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'active', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && data.uid == userId
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160 && data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.role in ['admin', 'editor']
+        && data.active is bool
+        && data.createdAt is timestamp && data.updatedAt is timestamp
+        && data.createdBy is string && data.createdBy.size() >= 1 && data.createdBy.size() <= 128
+        && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128;
+    }
+
     function hasActiveUserDoc() {
-      return isSignedIn() && exists(userDocPath()) && get(userDocPath()).data.active == true;
+      return isSignedIn()
+        && exists(userDocPath())
+        && isValidRoleRecord(request.auth.uid, get(userDocPath()).data)
+        && get(userDocPath()).data.active == true;
     }
 
     function isAdmin() {
-      return isBootstrappedAdmin() || (hasActiveUserDoc() && get(userDocPath()).data.role == 'ADMIN');
+      return hasActiveUserDoc() && get(userDocPath()).data.role == 'admin' && isMfaSignedIn();
     }
 
     function isEditor() {
-      return hasActiveUserDoc() && get(userDocPath()).data.role == 'EDITOR';
+      return hasActiveUserDoc() && get(userDocPath()).data.role == 'editor';
     }
 
     function isAdminOrEditor() {
@@ -174,37 +194,6 @@ service cloud.firestore {
         && data.createdAt == request.time;
     }
 
-    function isValidSubscriber(data) {
-      return data.keys().hasAll(['email', 'consentAccepted', 'status', 'unsubscribeToken', 'createdAt'])
-        && data.keys().hasOnly(['email', 'consentAccepted', 'status', 'unsubscribeToken', 'createdAt', 'unsubscribedAt'])
-        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160 && data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
-        && data.consentAccepted == true
-        && data.status in ['active', 'unsubscribed']
-        && data.unsubscribeToken is string && data.unsubscribeToken.size() >= 16 && data.unsubscribeToken.size() <= 128;
-    }
-
-    function isValidAdminUser(data) {
-      return data.keys().hasAll(['email', 'displayName', 'role', 'active'])
-        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'active', 'updatedAt'])
-        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
-        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
-        && data.role in ['ADMIN', 'EDITOR']
-        && data.active is bool;
-    }
-
-    function isValidAuditLog(data) {
-      return data.keys().hasAll(['actorUid', 'actorEmail', 'actorRole', 'action', 'targetCollection', 'targetId', 'summary', 'createdAt'])
-        && data.keys().hasOnly(['actorUid', 'actorEmail', 'actorRole', 'action', 'targetCollection', 'targetId', 'summary', 'createdAt'])
-        && data.actorUid is string && data.actorUid.size() >= 4 && data.actorUid.size() <= 128
-        && data.actorEmail is string && data.actorEmail.size() >= 5 && data.actorEmail.size() <= 160
-        && data.actorRole in ['ADMIN', 'EDITOR']
-        && data.action is string && data.action.size() >= 3 && data.action.size() <= 100
-        && data.targetCollection is string && data.targetCollection.size() >= 2 && data.targetCollection.size() <= 80
-        && data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128
-        && data.summary is string && data.summary.size() >= 3 && data.summary.size() <= 300
-        && data.createdAt == request.time;
-    }
-
     match /site_settings/{settingId} {
       allow get: if isValidId(settingId);
       allow list: if false;
@@ -255,21 +244,17 @@ service cloud.firestore {
     }
 
     match /inquiries/{inquiryId} {
-      allow create: if isValidId(inquiryId) && isValidInquiry(incoming());
+      // Public inquiry creation must use the trusted server workflow.
+      allow create: if false;
       allow get: if isValidId(inquiryId) && isAdmin();
       allow list: if isAdmin();
-      allow update: if isValidId(inquiryId) && isAdmin()
-        && incoming().diff(existing()).affectedKeys().hasOnly(['inquiryStatus'])
-        && incoming().inquiryStatus in ['new', 'reviewing', 'contacted', 'archived'];
-      allow delete: if isValidId(inquiryId) && isAdmin();
+      // Inquiry mutations use server transactions that append audit events.
+      allow update, delete: if false;
     }
 
     match /newsletter_subscribers/{subscriberHash} {
-      allow create: if subscriberHash.matches('^[a-f0-9]{64}$')
-        && isValidSubscriber(incoming())
-        && !('unsubscribedAt' in incoming())
-        && incoming().status == 'active'
-        && incoming().createdAt == request.time;
+      // Enrollment is disabled until the full confirmation lifecycle is operational.
+      allow create: if false;
       allow update: if subscriberHash.matches('^[a-f0-9]{64}$') && (
         isAdmin() || (
           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'unsubscribedAt'])
@@ -283,19 +268,19 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow get: if isValidId(userId) && isSignedIn() && (
+        (request.auth.uid == userId && isValidRoleRecord(userId, existing())) || isAdmin()
+      );
       allow list: if isAdmin();
-      allow create, update: if isValidId(userId) && isAdmin() && isValidAdminUser(incoming());
-      allow delete: if isValidId(userId) && isAdmin() && userId != request.auth.uid;
+      // Role records are provisioned only by the trusted server.
+      allow create, update, delete: if false;
     }
 
     match /audit_logs/{logId} {
-      allow create: if isValidId(logId) && isAdminOrEditor()
-        && isValidAuditLog(incoming())
-        && incoming().actorUid == request.auth.uid;
       allow get: if isValidId(logId) && isAdmin();
       allow list: if isAdmin();
-      allow update, delete: if false;
+      // Audit records are written by trusted server operations only.
+      allow create, update, delete: if false;
     }
   }
 }
