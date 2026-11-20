@@ -1,22 +1,81 @@
 import crypto from 'node:crypto';
-import express, { type NextFunction, type Request, type Response } from 'express';
+import fs from 'node:fs';
+import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer as createViteServer } from 'vite';
 import { z } from 'zod';
 import { PUBLIC_ARTICLE_SLUGS, PUBLIC_WORK_SLUGS } from './src/data/sitemapSlugs.ts';
+import { VERIFIED_CONTACT } from './src/data/seedData.ts';
 import { getGeminiClient } from './src/lib/gemini.ts';
-import { newsletterSchema, projectInquirySchema, sanitizePlainText } from './src/lib/validation.ts';
+import { AuthorizationError, isRoleRecord, mayProvisionRole, mayRemoveActiveAdmin, resolveVerifiedPrincipal, roleAllows, type AppRole, type VerifiedPrincipal } from './src/lib/admin-auth.ts';
+import { projectInquirySchema, sanitizePlainText } from './src/lib/validation.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const firebaseConfig = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'firebase-applet-config.json'), 'utf8')
+) as { projectId: string; firestoreDatabaseId: string };
+// Local emulator runs may override the demo project namespace; production keeps the configured values.
+const firebaseProjectId = process.env.FIREBASE_PROJECT_ID?.trim() || firebaseConfig.projectId;
+const firestoreDatabaseId = process.env.FIREBASE_FIRESTORE_DATABASE_ID?.trim() || firebaseConfig.firestoreDatabaseId;
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT = 3000;
+const INQUIRY_IDEMPOTENCY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+const EMULATOR_PROJECT_ID = 'demo-exponential-local';
+const EMULATOR_DATABASE_ID = '(default)';
+const EMULATOR_AUTH_HOST = '127.0.0.1:9099';
+const EMULATOR_FIRESTORE_HOST = '127.0.0.1:8080';
+const emulatorMode =
+  process.env.FIREBASE_EMULATOR_MODE === 'true' ||
+  Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) ||
+  Boolean(process.env.FIRESTORE_EMULATOR_HOST) ||
+  process.env.VITE_FIREBASE_USE_EMULATORS === 'true';
+
+function assertEmulatorIsolation() {
+  if (!emulatorMode) return;
+  const expectedEnv: Array<[string, string | undefined, string]> = [
+    ['FIREBASE_PROJECT_ID', process.env.FIREBASE_PROJECT_ID?.trim(), EMULATOR_PROJECT_ID],
+    ['FIREBASE_FIRESTORE_DATABASE_ID', process.env.FIREBASE_FIRESTORE_DATABASE_ID?.trim(), EMULATOR_DATABASE_ID],
+    ['FIREBASE_AUTH_EMULATOR_HOST', process.env.FIREBASE_AUTH_EMULATOR_HOST, EMULATOR_AUTH_HOST],
+    ['FIRESTORE_EMULATOR_HOST', process.env.FIRESTORE_EMULATOR_HOST, EMULATOR_FIRESTORE_HOST],
+    ['GCLOUD_PROJECT', process.env.GCLOUD_PROJECT, EMULATOR_PROJECT_ID],
+    ['VITE_FIREBASE_USE_EMULATORS', process.env.VITE_FIREBASE_USE_EMULATORS, 'true'],
+    ['VITE_FIREBASE_PROJECT_ID', process.env.VITE_FIREBASE_PROJECT_ID, EMULATOR_PROJECT_ID],
+    ['VITE_FIREBASE_DATABASE_ID', process.env.VITE_FIREBASE_DATABASE_ID, EMULATOR_DATABASE_ID],
+    ['VITE_FIREBASE_AUTH_EMULATOR_URL', process.env.VITE_FIREBASE_AUTH_EMULATOR_URL, `http://${EMULATOR_AUTH_HOST}`],
+    ['VITE_FIREBASE_FIRESTORE_EMULATOR_HOST', process.env.VITE_FIREBASE_FIRESTORE_EMULATOR_HOST, '127.0.0.1'],
+    ['VITE_FIREBASE_FIRESTORE_EMULATOR_PORT', process.env.VITE_FIREBASE_FIRESTORE_EMULATOR_PORT, '8080'],
+  ];
+  const problems = expectedEnv
+    .filter(([, actual, expected]) => actual !== expected)
+    .map(([name, actual, expected]) => `${name} must be "${expected}" but was "${actual ?? '(unset)'}"`);
+  if (firebaseProjectId !== EMULATOR_PROJECT_ID) {
+    problems.push(`resolved project ID must be "${EMULATOR_PROJECT_ID}" but was "${firebaseProjectId}"`);
+  }
+  if (firestoreDatabaseId !== EMULATOR_DATABASE_ID) {
+    problems.push(`resolved Firestore database ID must be "${EMULATOR_DATABASE_ID}" but was "${firestoreDatabaseId}"`);
+  }
+  if (problems.length > 0) {
+    throw new Error(`Refusing to start in emulator mode with unsafe Firebase configuration:\n- ${problems.join('\n- ')}`);
+  }
+  console.log(
+    `[emulator] project=${firebaseProjectId} database=${firestoreDatabaseId} ` +
+      `auth=${process.env.FIREBASE_AUTH_EMULATOR_HOST} firestore=${process.env.FIRESTORE_EMULATOR_HOST} ` +
+      `viteProject=${process.env.VITE_FIREBASE_PROJECT_ID} viteDatabase=${process.env.VITE_FIREBASE_DATABASE_ID} ` +
+      `viteEmulators=${process.env.VITE_FIREBASE_USE_EMULATORS}`,
+  );
+}
+
+assertEmulatorIsolation();
 
 interface RateEntry {
   count: number;
   resetAt: number;
 }
+
+type AuthenticatedRequest = Request & { verifiedPrincipal: VerifiedPrincipal };
 
 const MAX_RATE_BUCKET_SIZE = 10_000;
 const rateBuckets = new Map<string, RateEntry>();
@@ -34,10 +93,7 @@ cleanupTimer.unref();
 
 function createRateLimiter(windowMs: number, maxRequests: number) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const ip =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      req.socket.remoteAddress ||
-      'unknown';
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const key = `${req.path}:${ip}`;
     const now = Date.now();
     const existing = rateBuckets.get(key);
@@ -60,6 +116,7 @@ function createRateLimiter(windowMs: number, maxRequests: number) {
     }
 
     if (existing.count >= maxRequests) {
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((existing.resetAt - now) / 1000))));
       return res.status(429).json({
         error: 'Too many requests. Please wait a moment before trying again.',
       });
@@ -104,14 +161,29 @@ function sameOriginApiGuard(req: Request, res: Response, next: NextFunction) {
 }
 
 function securityHeadersMiddleware(_req: Request, res: Response, next: NextFunction) {
+  // Emulator runs must reach the local Auth/Firestore ports; production directives are unchanged.
+  const emulatorOrigins =
+    process.env.VITE_FIREBASE_USE_EMULATORS === 'true' || process.env.FIREBASE_AUTH_EMULATOR_HOST
+      ? ' http://127.0.0.1:9099 http://localhost:9099 http://127.0.0.1:8080 http://localhost:8080 ws://127.0.0.1:8080 ws://localhost:8080'
+      : '';
+  // Vite injects an inline preamble and an HMR websocket in development only;
+  // production keeps the hash-pinned, inline-free policy. A hash makes
+  // 'unsafe-inline' inert, so the two forms must be exclusive.
+  const scriptPolicy = isProduction
+    ? "'self' 'sha256-gNL3A4G1b0XdmeXJhZR94Yj1NDSANE7XW/RrnVk0jVY=' https://apis.google.com https://www.gstatic.com https://www.google.com/recaptcha/ https://maps.googleapis.com https://maps.gstatic.com"
+    : "'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com/recaptcha/ https://maps.googleapis.com https://maps.gstatic.com";
+  const devConnectOrigins = isProduction ? '' : ' ws://127.0.0.1:* ws://localhost:*';
+  const emulatorFrameOrigins = emulatorOrigins
+    ? ' http://127.0.0.1:9099 http://localhost:9099'
+    : '';
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://maps.googleapis.com https://maps.gstatic.com",
+    `script-src ${scriptPolicy}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https://*.googleusercontent.com https://*.firebasestorage.app https://firebasestorage.googleapis.com https://maps.googleapis.com https://maps.gstatic.com https://*.ggpht.com",
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.gstatic.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://maps.googleapis.com https://places.googleapis.com wss:",
-    "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com",
+    `connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.gstatic.com https://www.google.com/recaptcha/ https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://maps.googleapis.com https://places.googleapis.com wss:${emulatorOrigins}${devConnectOrigins}`,
+    `frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://www.google.com/recaptcha/${emulatorFrameOrigins}`,
     "frame-ancestors 'self' https://aistudio.google.com https://*.google.com https://*.googleusercontent.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -130,24 +202,95 @@ function securityHeadersMiddleware(_req: Request, res: Response, next: NextFunct
   next();
 }
 
-function resolveNotificationWebhook(): string | null {
-  const raw = (process.env.INQUIRY_WEBHOOK_URL || '').trim();
-  if (!raw) return null;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === 'https:' ? parsed.toString() : null;
-  } catch {
-    return null;
+let adminServicesPromise: Promise<{
+  auth: import('firebase-admin/auth').Auth;
+  db: import('firebase-admin/firestore').Firestore;
+  FieldValue: typeof import('firebase-admin/firestore').FieldValue;
+} | null> | null = null;
+
+async function getAdminServices() {
+  if (!adminServicesPromise) {
+    adminServicesPromise = (async () => {
+      try {
+        const [{ applicationDefault, getApps, initializeApp }, { getAuth }, { FieldValue, getFirestore }] =
+          await Promise.all([import('firebase-admin/app'), import('firebase-admin/auth'), import('firebase-admin/firestore')]);
+        const app =
+          getApps()[0] ||
+          initializeApp(
+            emulatorMode
+              ? { projectId: firebaseProjectId }
+              : { credential: applicationDefault(), projectId: firebaseProjectId },
+          );
+        return {
+          auth: getAuth(app),
+          db: getFirestore(app, firestoreDatabaseId),
+          FieldValue,
+        };
+      } catch {
+        adminServicesPromise = null;
+        return null;
+      }
+    })();
   }
+  return adminServicesPromise;
+}
+
+async function resolvePrincipal(req: Request): Promise<VerifiedPrincipal> {
+  const authorization = req.get('authorization') || '';
+  const match = /^Bearer ([^\s]+)$/i.exec(authorization);
+  if (!match) throw new AuthorizationError('Missing bearer token.', 401);
+  const services = await getAdminServices();
+  if (!services) throw new AuthorizationError('Admin services are unavailable.', 503);
+  return resolveVerifiedPrincipal(
+    services.auth,
+    async (uid) => {
+      const snapshot = await services.db.collection('users').doc(uid).get();
+      return snapshot.exists ? snapshot.data() : null;
+    },
+    match[1],
+  );
+}
+
+function requireRole(...allowedRoles: AppRole[]): RequestHandler {
+  return async (req, res, next) => {
+    try {
+      const principal = await resolvePrincipal(req);
+      if (!roleAllows(principal.role, allowedRoles)) {
+        return res.status(403).json({ error: 'You are not authorized to perform this operation.' });
+      }
+      (req as AuthenticatedRequest).verifiedPrincipal = principal;
+      return next();
+    } catch (error) {
+      const status = error instanceof AuthorizationError ? error.status : 503;
+      return res.status(status === 401 || status === 403 ? status : 503).json({
+        error: status === 401 ? 'A valid, active sign-in is required.' : status === 403 ? 'Account permissions could not be verified.' : 'Authorization is temporarily unavailable.',
+      });
+    }
+  };
+}
+
+function getPrincipal(req: Request): VerifiedPrincipal {
+  return (req as AuthenticatedRequest).verifiedPrincipal;
+}
+
+function isActiveAdminRecord(data: Record<string, unknown>): boolean {
+  return data.active === true && (data.role === 'admin' || data.role === 'ADMIN');
+}
+
+async function getInquiryStore() {
+  const services = await getAdminServices();
+  return services ? { db: services.db, FieldValue: services.FieldValue } : null;
 }
 
 async function startServer() {
   const app = express();
-  app.set('trust proxy', 1);
+  // Trust forwarded IP headers only when the deployment owner confirms one proxy hop.
+  app.set('trust proxy', process.env.TRUST_PROXY_HOPS === '1' ? 1 : false);
   app.disable('x-powered-by');
   app.use(securityHeadersMiddleware);
   app.use('/api', sameOriginApiGuard);
-  app.use(express.json({ limit: '64kb' }));
+  // Inquiry payloads are far smaller than this; keep a modest ceiling across JSON APIs.
+  app.use(express.json({ limit: '16kb' }));
 
   // Sanitized error response for malformed JSON bodies
   app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
@@ -161,11 +304,243 @@ async function startServer() {
       }
       return res.status(400).send('Bad Request');
     }
+    if (err && typeof err === 'object' && 'type' in err && (err as { type?: string }).type === 'entity.too.large') {
+      if (req.path.startsWith('/api')) {
+        return res.status(413).json({ error: 'Request payload is too large.' });
+      }
+      return res.status(413).send('Payload Too Large');
+    }
     return next(err);
   });
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', service: 'exponential-media-africa' });
+  });
+
+  app.get('/api/auth/session', requireRole('public', 'editor', 'admin'), (req, res) => {
+    const principal = getPrincipal(req);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ uid: principal.uid, role: principal.role });
+  });
+
+  const provisionRoleSchema = z.object({
+    uid: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/),
+    role: z.enum(['editor', 'admin']),
+  }).strict();
+  const updateRoleSchema = z.object({
+    role: z.enum(['editor', 'admin']).optional(),
+    active: z.boolean().optional(),
+  }).strict().refine((value) => value.role !== undefined || value.active !== undefined);
+  const inquiryStatusSchema = z.object({
+    inquiryStatus: z.enum(['new', 'reviewing', 'contacted', 'archived']),
+  }).strict();
+
+  app.post('/api/admin/roles', requireRole('admin'), async (req, res) => {
+    const parsed = provisionRoleSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'A valid user ID and role are required.' });
+    const principal = getPrincipal(req);
+    if (!mayProvisionRole(principal, parsed.data.uid)) return res.status(409).json({ error: 'Administrators cannot provision their own account.' });
+    const services = await getAdminServices();
+    if (!services) return res.status(503).json({ error: 'Role management is temporarily unavailable.' });
+
+    let targetAccount;
+    try {
+      targetAccount = await services.auth.getUser(parsed.data.uid);
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error ? String((error as { code: unknown }).code) : '';
+      return res.status(code === 'auth/user-not-found' ? 404 : 503).json({ error: code === 'auth/user-not-found' ? 'The Firebase account was not found.' : 'The account could not be verified.' });
+    }
+    if (targetAccount.disabled || !targetAccount.emailVerified || !targetAccount.email) {
+      return res.status(400).json({ error: 'The target account must be enabled and have a verified email.' });
+    }
+    if (!z.string().email().max(160).safeParse(targetAccount.email).success) {
+      return res.status(400).json({ error: 'The target account email is outside the supported role-record format.' });
+    }
+    if (parsed.data.role === 'admin' && !targetAccount.multiFactor?.enrolledFactors?.length) {
+      return res.status(400).json({ error: 'Administrator accounts must enroll a Firebase multi-factor authentication method first.' });
+    }
+
+    const users = services.db.collection('users');
+    const controlRef = services.db.collection('_admin_control').doc('active_admins');
+    const targetRef = users.doc(parsed.data.uid);
+    const auditRef = services.db.collection('audit_logs').doc();
+    try {
+      const result = await services.db.runTransaction(async (transaction) => {
+        await transaction.get(controlRef);
+        const usersSnapshot = await transaction.get(users);
+        const actorSnapshot = usersSnapshot.docs.find((doc) => doc.id === principal.uid);
+        const actorRoleRecord = actorSnapshot && isRoleRecord(actorSnapshot.id, actorSnapshot.data()) ? actorSnapshot.data() : null;
+        if (!actorRoleRecord || !actorRoleRecord.active || actorRoleRecord.role !== 'admin') return { kind: 'forbidden' as const };
+
+        const existingSnapshot = usersSnapshot.docs.find((doc) => doc.id === parsed.data.uid);
+        if (existingSnapshot) return { kind: 'exists' as const };
+        const activeAdminCount = usersSnapshot.docs.filter((doc) => isActiveAdminRecord(doc.data())).length;
+        if (usersSnapshot.size > 450) return { kind: 'too_many' as const };
+
+        const timestamp = services.FieldValue.serverTimestamp();
+        transaction.create(targetRef, {
+          uid: parsed.data.uid,
+          email: targetAccount.email!.toLowerCase(),
+          displayName: targetAccount.displayName?.trim().slice(0, 120) || targetAccount.email!.slice(0, 120),
+          role: parsed.data.role,
+          active: true,
+          createdAt: timestamp,
+          createdBy: principal.uid,
+          updatedAt: timestamp,
+          updatedBy: principal.uid,
+        });
+        transaction.set(controlRef, { activeAdminCount: activeAdminCount + (parsed.data.role === 'admin' ? 1 : 0), updatedAt: timestamp });
+        transaction.create(auditRef, {
+          actorUid: principal.uid,
+          actorEmail: principal.email,
+          actorRole: 'admin',
+          action: 'PROVISION_ROLE',
+          targetCollection: 'users',
+          targetId: parsed.data.uid,
+          outcome: 'success',
+          summary: `Provisioned ${parsed.data.role} role.`,
+          createdAt: timestamp,
+        });
+        return { kind: 'created' as const };
+      });
+      if (result.kind === 'forbidden') return res.status(403).json({ error: 'Administrator authorization changed. Sign in again and retry.' });
+      if (result.kind === 'exists') return res.status(409).json({ error: 'A role record already exists for this account.' });
+      if (result.kind === 'too_many') return res.status(503).json({ error: 'Role management requires an administrator review.' });
+      return res.status(201).json({ success: true, uid: parsed.data.uid, role: parsed.data.role, active: true });
+    } catch {
+      return res.status(503).json({ error: 'Role provisioning did not complete. Please retry.' });
+    }
+  });
+
+  app.patch('/api/admin/roles/:uid', requireRole('admin'), async (req, res) => {
+    const parsed = updateRoleSchema.safeParse(req.body);
+    const uid = req.params.uid;
+    if (!parsed.success || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) return res.status(400).json({ error: 'A valid role update is required.' });
+    const principal = getPrincipal(req);
+    if (uid === principal.uid) return res.status(409).json({ error: 'Administrators cannot change their own role or active state.' });
+    const services = await getAdminServices();
+    if (!services) return res.status(503).json({ error: 'Role management is temporarily unavailable.' });
+
+    let targetAccount;
+    try {
+      targetAccount = await services.auth.getUser(uid);
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error ? String((error as { code: unknown }).code) : '';
+      if (code === 'auth/user-not-found' && parsed.data.active === false) {
+        targetAccount = null;
+      } else {
+        return res.status(code === 'auth/user-not-found' ? 404 : 503).json({ error: code === 'auth/user-not-found' ? 'The Firebase account was not found.' : 'The account could not be verified.' });
+      }
+    }
+    if (parsed.data.active !== false && (!targetAccount || targetAccount.disabled || !targetAccount.emailVerified || !targetAccount.email || !z.string().email().max(160).safeParse(targetAccount.email).success)) {
+      return res.status(400).json({ error: 'The target account must be enabled and have a verified email before activation.' });
+    }
+    if (parsed.data.active !== false && parsed.data.role === 'admin' && !targetAccount?.multiFactor?.enrolledFactors?.length) {
+      return res.status(400).json({ error: 'Administrator accounts must enroll a Firebase multi-factor authentication method first.' });
+    }
+
+    const users = services.db.collection('users');
+    const controlRef = services.db.collection('_admin_control').doc('active_admins');
+    const targetRef = users.doc(uid);
+    const auditRef = services.db.collection('audit_logs').doc();
+    try {
+      const result = await services.db.runTransaction(async (transaction) => {
+        await transaction.get(controlRef);
+        const usersSnapshot = await transaction.get(users);
+        if (usersSnapshot.size > 450) return { kind: 'too_many' as const };
+        const actorSnapshot = usersSnapshot.docs.find((doc) => doc.id === principal.uid);
+        const actorRecord = actorSnapshot && isRoleRecord(actorSnapshot.id, actorSnapshot.data()) ? actorSnapshot.data() : null;
+        if (!actorRecord || !actorRecord.active || actorRecord.role !== 'admin') return { kind: 'forbidden' as const };
+        const targetSnapshot = usersSnapshot.docs.find((doc) => doc.id === uid);
+        if (!targetSnapshot) return { kind: 'missing' as const };
+        const current = isRoleRecord(uid, targetSnapshot.data()) ? targetSnapshot.data() : null;
+        if (!current) return { kind: 'malformed' as const };
+
+        const nextRole = parsed.data.role ?? current.role;
+        const nextActive = parsed.data.active ?? current.active;
+        if (nextActive && nextRole === 'admin' && !targetAccount?.multiFactor?.enrolledFactors?.length) return { kind: 'mfa_required' as const };
+        if (nextRole === current.role && nextActive === current.active) return { kind: 'unchanged' as const, role: current.role, active: current.active };
+        const activeAdminCount = usersSnapshot.docs.filter((doc) => isActiveAdminRecord(doc.data())).length;
+        if (!mayRemoveActiveAdmin(activeAdminCount, current.role, current.active, nextRole, nextActive)) return { kind: 'last_admin' as const };
+
+        const timestamp = services.FieldValue.serverTimestamp();
+        transaction.update(targetRef, {
+          role: nextRole,
+          active: nextActive,
+          email: (targetAccount?.email && targetAccount.email.length <= 160 ? targetAccount.email : current.email).toLowerCase(),
+          displayName: targetAccount?.displayName?.trim().slice(0, 120) || targetAccount?.email?.slice(0, 120) || current.displayName,
+          updatedAt: timestamp,
+          updatedBy: principal.uid,
+        });
+        transaction.set(controlRef, {
+          activeAdminCount: activeAdminCount + (nextRole === 'admin' && nextActive ? 1 : 0) - (current.role === 'admin' && current.active ? 1 : 0),
+          updatedAt: timestamp,
+        });
+        transaction.create(auditRef, {
+          actorUid: principal.uid,
+          actorEmail: principal.email,
+          actorRole: 'admin',
+          action: nextActive ? 'UPDATE_ROLE' : 'DEACTIVATE_ROLE',
+          targetCollection: 'users',
+          targetId: uid,
+          outcome: 'success',
+          summary: `Set role to ${nextRole}; active=${nextActive}.`,
+          createdAt: timestamp,
+        });
+        return { kind: 'updated' as const, role: nextRole, active: nextActive };
+      });
+      if (result.kind === 'forbidden') return res.status(403).json({ error: 'Administrator authorization changed. Sign in again and retry.' });
+      if (result.kind === 'missing') return res.status(404).json({ error: 'No role record exists for this account.' });
+      if (result.kind === 'malformed') return res.status(409).json({ error: 'The role record is invalid and requires owner recovery.' });
+      if (result.kind === 'last_admin') return res.status(409).json({ error: 'The last active administrator cannot be deactivated or demoted.' });
+      if (result.kind === 'mfa_required') return res.status(400).json({ error: 'Administrator accounts must enroll a Firebase multi-factor authentication method first.' });
+      if (result.kind === 'too_many') return res.status(503).json({ error: 'Role management requires an administrator review.' });
+      return res.json({ success: true, uid, role: result.role, active: result.active });
+    } catch {
+      return res.status(503).json({ error: 'Role update did not complete. Please retry.' });
+    }
+  });
+
+  app.patch('/api/admin/inquiries/:inquiryId/status', requireRole('admin'), async (req, res) => {
+    const inquiryId = req.params.inquiryId;
+    const parsed = inquiryStatusSchema.safeParse(req.body);
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(inquiryId) || !parsed.success) {
+      return res.status(400).json({ error: 'A valid inquiry status update is required.' });
+    }
+    const principal = getPrincipal(req);
+    const services = await getAdminServices();
+    if (!services) return res.status(503).json({ error: 'Inquiry management is temporarily unavailable.' });
+    const actorRef = services.db.collection('users').doc(principal.uid);
+    const inquiryRef = services.db.collection('inquiries').doc(inquiryId);
+    const auditRef = services.db.collection('audit_logs').doc();
+    try {
+      const result = await services.db.runTransaction(async (transaction) => {
+        const [actorSnapshot, inquirySnapshot] = await Promise.all([transaction.get(actorRef), transaction.get(inquiryRef)]);
+        const actorRecord = actorSnapshot.exists && isRoleRecord(principal.uid, actorSnapshot.data()) ? actorSnapshot.data() : null;
+        if (!actorRecord || !actorRecord.active || actorRecord.role !== 'admin') return { kind: 'forbidden' as const };
+        if (!inquirySnapshot.exists) return { kind: 'missing' as const };
+        const previousStatus = inquirySnapshot.get('inquiryStatus');
+        transaction.update(inquiryRef, { inquiryStatus: parsed.data.inquiryStatus });
+        const timestamp = services.FieldValue.serverTimestamp();
+        transaction.create(auditRef, {
+          actorUid: principal.uid,
+          actorEmail: principal.email,
+          actorRole: 'admin',
+          action: 'UPDATE_INQUIRY_STATUS',
+          targetCollection: 'inquiries',
+          targetId: inquiryId,
+          outcome: 'success',
+          summary: `Inquiry status changed from ${String(previousStatus)} to ${parsed.data.inquiryStatus}.`,
+          createdAt: timestamp,
+        });
+        return { kind: 'updated' as const };
+      });
+      if (result.kind === 'forbidden') return res.status(403).json({ error: 'Administrator authorization changed. Sign in again and retry.' });
+      if (result.kind === 'missing') return res.status(404).json({ error: 'Inquiry not found.' });
+      return res.json({ success: true, inquiryId, inquiryStatus: parsed.data.inquiryStatus });
+    } catch {
+      return res.status(503).json({ error: 'Inquiry status update did not complete. Please retry.' });
+    }
   });
 
   app.get('/api/maps/config', (_req, res) => {
@@ -277,12 +652,15 @@ async function startServer() {
     }
   );
 
-  // Server-side validation, sanitization, rate limiting & reference generation for Smart Project Inquiries
+  const inquiryPayloadSchema = projectInquirySchema.strict();
+  const idempotencyHeaderSchema = z.string().uuid();
+
+  // Public inquiry submission persists only through this trusted server route.
   app.post(
-    '/api/inquiries/validate',
-    createRateLimiter(10 * 60 * 1000, 8),
-    (req, res) => {
-      const parsed = projectInquirySchema.safeParse(req.body);
+    '/api/inquiries',
+    createRateLimiter(10 * 60 * 1000, 6),
+    async (req, res) => {
+      const parsed = inquiryPayloadSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({
           error: parsed.error.issues[0]?.message || 'Invalid inquiry submission.',
@@ -291,19 +669,15 @@ async function startServer() {
 
       const data = parsed.data;
       if (data.websiteHoneypot && data.websiteHoneypot.length > 0) {
-        return res.status(400).json({ error: 'Submission rejected.' });
+        return res.status(400).json({ error: 'Submission could not be accepted. Please check the form and try again.' });
       }
 
-      const year = new Date().getFullYear();
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      const bytes = crypto.randomBytes(6);
-      const suffix = Array.from(bytes)
-        .map((b) => chars[b % chars.length])
-        .join('');
-      const referenceCode = `EMA-${year}-${suffix}`;
+      const idempotencyKey = idempotencyHeaderSchema.safeParse(req.get('Idempotency-Key'));
+      if (!idempotencyKey.success) {
+        return res.status(400).json({ error: 'Please retry the form submission.' });
+      }
 
-      const sanitizedPayload = {
-        referenceCode,
+      const normalizedInput = {
         fullName: sanitizePlainText(data.fullName),
         businessEmail: sanitizePlainText(data.businessEmail).toLowerCase(),
         companyName: sanitizePlainText(data.companyName),
@@ -313,64 +687,124 @@ async function startServer() {
         estimatedBudget: sanitizePlainText(data.estimatedBudget),
         projectTimeline: sanitizePlainText(data.projectTimeline),
         projectDescription: sanitizePlainText(data.projectDescription),
-        consentAccepted: true,
+        consentAccepted: true as const,
+        websiteHoneypot: '',
+      };
+
+      const normalizedResult = inquiryPayloadSchema.safeParse(normalizedInput);
+      if (!normalizedResult.success) {
+        return res.status(400).json({
+          error: normalizedResult.error.issues[0]?.message || 'Please check the submitted details.',
+        });
+      }
+      const sanitizedPayload = {
+        fullName: normalizedResult.data.fullName,
+        businessEmail: normalizedResult.data.businessEmail,
+        companyName: normalizedResult.data.companyName,
+        phone: normalizedResult.data.phone,
+        industry: normalizedResult.data.industry,
+        requiredServices: normalizedResult.data.requiredServices,
+        estimatedBudget: normalizedResult.data.estimatedBudget,
+        projectTimeline: normalizedResult.data.projectTimeline,
+        projectDescription: normalizedResult.data.projectDescription,
+        consentAccepted: normalizedResult.data.consentAccepted,
         inquiryStatus: 'new' as const,
       };
 
-      const notificationWebhook = resolveNotificationWebhook();
-      if (notificationWebhook) {
-        fetch(notificationWebhook, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(8000),
-          body: JSON.stringify({
-            event: 'new_project_inquiry',
-            referenceCode,
-            companyName: sanitizedPayload.companyName,
-            industry: sanitizedPayload.industry,
-            servicesCount: sanitizedPayload.requiredServices.length,
-          }),
-        }).catch(() => {
-          // Do not fail user submission or leak internal notification errors
+      const store = await getInquiryStore();
+      if (!store) {
+        return res.status(503).json({
+          error: `Online submission is temporarily unavailable. Your entries remain in this form; contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`,
         });
       }
 
-      return res.status(200).json({
-        valid: true,
-        sanitizedPayload,
-        emailNotificationConfigured: Boolean(notificationWebhook),
-      });
+      // The client key is an idempotency token, not an authorization credential.
+      // Key the payload digest so the private record does not contain a plain PII hash.
+      const payloadHash = crypto
+        .createHmac('sha256', idempotencyKey.data)
+        .update(JSON.stringify(sanitizedPayload))
+        .digest('hex');
+      const idempotencyId = crypto.createHash('sha256').update(idempotencyKey.data).digest('hex');
+      const idempotencyRef = store.db.collection('_inquiry_idempotency').doc(idempotencyId);
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+      try {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const suffix = Array.from(crypto.randomBytes(12), (byte) => chars[byte % chars.length]).join('');
+          const proposedReference = `EMA-${new Date().getFullYear()}-${suffix}`;
+          const inquiryRef = store.db.collection('inquiries').doc();
+          const referenceRef = store.db.collection('_inquiry_references').doc(proposedReference);
+
+          const result = await store.db.runTransaction(async (transaction) => {
+            const previous = await transaction.get(idempotencyRef);
+            if (previous.exists) {
+              const saved = previous.data();
+              const expiresAt = saved?.expiresAt;
+              const createdAt = saved?.createdAt;
+              const expiresAtMillis =
+                expiresAt && typeof expiresAt.toMillis === 'function'
+                  ? expiresAt.toMillis()
+                  : createdAt && typeof createdAt.toMillis === 'function'
+                    ? createdAt.toMillis() + INQUIRY_IDEMPOTENCY_TTL_MS
+                    : null;
+              const expired = expiresAtMillis !== null && expiresAtMillis <= Date.now();
+              if (!expired) {
+                if (saved?.payloadHash !== payloadHash || typeof saved?.referenceCode !== 'string') {
+                  return { kind: 'conflict' as const };
+                }
+                return { kind: 'saved' as const, referenceCode: saved.referenceCode, duplicate: true };
+              }
+            }
+
+            const reference = await transaction.get(referenceRef);
+            if (reference.exists) return { kind: 'collision' as const };
+
+            const createdAt = store.FieldValue.serverTimestamp();
+            transaction.create(inquiryRef, {
+              ...sanitizedPayload,
+              referenceCode: proposedReference,
+              createdAt,
+            });
+            const idempotencyRecord = {
+              payloadHash,
+              referenceCode: proposedReference,
+              createdAt,
+              expiresAt: new Date(Date.now() + INQUIRY_IDEMPOTENCY_TTL_MS),
+            };
+            if (previous.exists) transaction.set(idempotencyRef, idempotencyRecord);
+            else transaction.create(idempotencyRef, idempotencyRecord);
+            transaction.create(referenceRef, {
+              inquiryId: inquiryRef.id,
+              createdAt,
+            });
+            return { kind: 'saved' as const, referenceCode: proposedReference, duplicate: false };
+          });
+
+          if (result.kind === 'conflict') {
+            return res.status(409).json({ error: 'This submission key was already used for different form details. Please submit again.' });
+          }
+          if (result.kind === 'saved') {
+            return res.status(result.duplicate ? 200 : 201).json({ success: true, referenceCode: result.referenceCode });
+          }
+        }
+        return res.status(503).json({
+          error: `We could not confirm that your inquiry was recorded. Your entries remain in this form; contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`,
+        });
+      } catch {
+        return res.status(503).json({
+          error: `We could not confirm that your inquiry was recorded. Your entries remain in this form; contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`,
+        });
+      }
     }
   );
 
-  // Server-side validation, hashing & token generation for Newsletter Subscriptions
+  // Newsletter enrollment is disabled until confirmation, unsubscribe, and suppression are complete.
   app.post(
     '/api/newsletter/validate',
     createRateLimiter(10 * 60 * 1000, 12),
-    (req, res) => {
-      const parsed = newsletterSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({
-          error: parsed.error.issues[0]?.message || 'Invalid newsletter request.',
-        });
-      }
-
-      if (parsed.data.websiteHoneypot && parsed.data.websiteHoneypot.length > 0) {
-        return res.status(400).json({ error: 'Submission rejected.' });
-      }
-
-      const normalizedEmail = sanitizePlainText(parsed.data.email).toLowerCase();
-      const subscriberHash = crypto
-        .createHash('sha256')
-        .update(normalizedEmail)
-        .digest('hex');
-      const unsubscribeToken = crypto.randomBytes(24).toString('hex');
-
-      return res.status(200).json({
-        valid: true,
-        subscriberHash,
-        email: normalizedEmail,
-        unsubscribeToken,
+    (_req, res) => {
+      return res.status(410).json({
+        error: 'Newsletter enrollment is currently unavailable. No subscription was created.',
       });
     }
   );
