@@ -2,7 +2,8 @@ export type DivisionId = 'creative' | 'estudios' | 'marketing' | 'emtc';
 
 export type ContentStatus = 'draft' | 'published';
 
-export type UserRole = 'ADMIN' | 'EDITOR';
+export type StaffRole = 'admin' | 'editor';
+export type UserRole = 'public' | StaffRole;
 
 export type PortfolioCategory =
   | 'Branding'
@@ -170,7 +171,7 @@ export interface AdminUserRecord {
   uid?: string;
   email: string;
   displayName: string;
-  role: UserRole;
+  role: StaffRole;
   active: boolean;
 }
 
@@ -178,11 +179,12 @@ export interface AuditLogRecord {
   id: string;
   actorUid: string;
   actorEmail: string;
-  actorRole: UserRole;
+  actorRole: StaffRole;
   action: string;
   targetCollection: string;
   targetId: string;
   summary: string;
+  outcome?: 'success' | 'failure';
   createdAt?: unknown;
 }
 
