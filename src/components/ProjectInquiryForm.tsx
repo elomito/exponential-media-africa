@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import React, { useEffect, useRef, useState } from 'react';
 import { Check, CheckCircle2, Lock, Mail, MessageCircle } from 'lucide-react';
 import { DIVISIONS, VERIFIED_CONTACT } from '../data/seedData';
-import { db } from '../lib/firebase';
 import { projectInquirySchema } from '../lib/validation';
 
 interface ProjectInquiryFormProps {
@@ -37,6 +35,18 @@ const TIMELINES = [
   '3 – 6 Months',
   'Annual Retainer / Ongoing',
 ];
+const INQUIRY_REFERENCE_PATTERN = /^EMA-\d{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{12}$/;
+
+function createIdempotencyKey(): string {
+  const browserCrypto = globalThis.crypto;
+  if (typeof browserCrypto.randomUUID === 'function') return browserCrypto.randomUUID();
+
+  const bytes = browserCrypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 export function ProjectInquiryForm({
   preselectedService,
@@ -57,14 +67,10 @@ export function ProjectInquiryForm({
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [websiteHoneypot, setWebsiteHoneypot] = useState('');
 
-  const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<{
-    referenceCode: string;
-    companyName: string;
-    servicesCount: number;
-    emailNotificationConfigured: boolean;
-  } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+  const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   useEffect(() => {
     if (preselectedService && !requiredServices.includes(preselectedService)) {
@@ -84,6 +90,7 @@ export function ProjectInquiryForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setErrorMsg(null);
 
     const candidate = {
@@ -106,40 +113,47 @@ export function ProjectInquiryForm({
       return;
     }
 
+    const fingerprint = JSON.stringify(candidate);
     setSubmitting(true);
+    let timeoutId: number | undefined;
     try {
-      const validateRes = await fetch('/api/inquiries/validate', {
+      if (!idempotencyRef.current || idempotencyRef.current.fingerprint !== fingerprint) {
+        idempotencyRef.current = { fingerprint, key: createIdempotencyKey() };
+      }
+      const idempotencyKey = idempotencyRef.current.key;
+      const controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller.abort(), 20_000);
+      const response = await fetch('/api/inquiries', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
         body: JSON.stringify(candidate),
+        signal: controller.signal,
       });
-
-      const validateJson = await validateRes.json();
-      if (!validateRes.ok || !validateJson.valid) {
-        setErrorMsg(validateJson.error || 'Server validation rejected the submission.');
+      const result: unknown = await response.json().catch(() => null);
+      const body = result && typeof result === 'object' ? result as Record<string, unknown> : null;
+      if (
+        !response.ok ||
+        body?.success !== true ||
+        typeof body.referenceCode !== 'string' ||
+        !INQUIRY_REFERENCE_PATTERN.test(body.referenceCode)
+      ) {
+        setErrorMsg(
+          typeof body?.error === 'string'
+            ? body.error
+            : `We could not confirm that your inquiry was recorded. Your entries remain here. Please contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`
+        );
         return;
       }
-
-      const payload = validateJson.sanitizedPayload;
-      const inquiryId = payload.referenceCode;
-
-      await setDoc(doc(db, 'inquiries', inquiryId), {
-        ...payload,
-        createdAt: serverTimestamp(),
-      });
-
-      setConfirmation({
-        referenceCode: payload.referenceCode,
-        companyName: payload.companyName,
-        servicesCount: payload.requiredServices.length,
-        emailNotificationConfigured: Boolean(validateJson.emailNotificationConfigured),
-      });
-    } catch (err) {
-      console.error('Inquiry submission failed:', err);
+      setConfirmation(body.referenceCode);
+    } catch {
       setErrorMsg(
-        `We could not record your inquiry online right now. Please email ${VERIFIED_CONTACT.email} or call ${VERIFIED_CONTACT.primaryPhone}.`
+        `We could not confirm that your inquiry was recorded. Your entries remain here. Retry this form or contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`
       );
     } finally {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       setSubmitting(false);
     }
   };
@@ -154,88 +168,22 @@ export function ProjectInquiryForm({
 
   if (confirmation) {
     return (
-      <div
-        role="status"
-        className={`p-8 rounded-2xl border ${
-          darkSurface
-            ? 'bg-[#141418] border-emerald-500/30 text-white'
-            : 'bg-emerald-50 border-emerald-200 text-neutral-900'
-        }`}
-      >
-        <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-4" aria-hidden="true" />
-        <h3 className="text-2xl font-display font-semibold tracking-tight mb-2">
-          Project Brief Recorded
-        </h3>
-        <p className={`text-sm leading-relaxed mb-4 ${darkSurface ? 'text-neutral-300' : 'text-neutral-700'}`}>
-          Thank you. Your inquiry for <strong>{confirmation.companyName}</strong> covering{' '}
-          {confirmation.servicesCount} selected service{confirmation.servicesCount === 1 ? '' : 's'} has been securely saved to our inquiry database.
-        </p>
-        {!confirmation.emailNotificationConfigured && (
-          <p className={`text-xs leading-relaxed mb-6 ${darkSurface ? 'text-neutral-400' : 'text-neutral-600'}`}>
-            For immediate follow-up alongside your stored brief, please quote your reference number on WhatsApp ({VERIFIED_CONTACT.primaryPhone}) or email{' '}
-            <a href={`mailto:${VERIFIED_CONTACT.email}`} className="text-[#FF1A1F] underline font-semibold">
-              {VERIFIED_CONTACT.email}
-            </a>
-            .
-          </p>
-        )}
-        <div
-          className={`p-4 rounded-xl border mb-6 ${
-            darkSurface ? 'bg-[#0B0B0D] border-white/10' : 'bg-white border-emerald-200'
-          }`}
-        >
-          <div className="text-xs text-neutral-400 mb-1">Unique Inquiry Reference</div>
-          <div className={`font-mono text-lg font-bold tabular-nums ${darkSurface ? 'text-[#FF1A1F]' : 'text-[#E50000]'}`}>
-            {confirmation.referenceCode}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setConfirmation(null);
-              setFullName('');
-              setBusinessEmail('');
-              setCompanyName('');
-              setPhone('');
-              setIndustry('');
-              setRequiredServices([]);
-              setEstimatedBudget('');
-              setProjectTimeline('');
-              setProjectDescription('');
-              setConsentAccepted(false);
-            }}
-            className="px-5 py-2.5 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg transition-colors"
-          >
-            Submit Another Brief
-          </button>
-          <a
-            href={`${VERIFIED_CONTACT.whatsappUrl}&text=${encodeURIComponent(
-              `Hello Exponential Media Africa, I have submitted inquiry reference ${confirmation.referenceCode} for ${confirmation.companyName}.`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border border-white/20 rounded-lg text-white hover:bg-white/10 transition-colors"
-          >
-            <MessageCircle className="w-4 h-4 text-[#ED2126]" aria-hidden="true" />
-            <span>Follow Up on WhatsApp</span>
-          </a>
-          <a
-            href={`mailto:${VERIFIED_CONTACT.email}?subject=${encodeURIComponent(
-              `Project Inquiry ${confirmation.referenceCode} — ${confirmation.companyName}`
-            )}`}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border border-white/20 rounded-lg text-white hover:bg-white/10 transition-colors"
-          >
-            <Mail className="w-4 h-4 text-[#ED2126]" aria-hidden="true" />
-            <span>Email Directly</span>
-          </a>
+      <div role="status" className={`p-6 sm:p-8 border ${darkSurface ? 'border-emerald-500/30 bg-emerald-950/20 text-white' : 'border-emerald-200 bg-emerald-50 text-neutral-900'}`}>
+        <CheckCircle2 className="w-9 h-9 text-emerald-500 mb-4" aria-hidden="true" />
+        <h3 className="text-2xl font-display font-bold mb-2">Inquiry recorded</h3>
+        <p className="text-sm leading-relaxed mb-5">Your project inquiry has been saved. Email notification is not configured through this form; for urgent follow-up, contact us directly.</p>
+        <div className="font-mono text-lg font-bold text-[#ED2126] mb-5">{confirmation}</div>
+        <div className="flex flex-wrap gap-3">
+          <a href={`mailto:${VERIFIED_CONTACT.email}`} className="inline-flex items-center gap-2 px-4 py-2.5 border border-current/20 text-sm font-semibold rounded-md"><Mail className="w-4 h-4" aria-hidden="true" />Email the team</a>
+          <a href={VERIFIED_CONTACT.whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 border border-current/20 text-sm font-semibold rounded-md"><MessageCircle className="w-4 h-4" aria-hidden="true" />WhatsApp</a>
         </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-6" noValidate aria-busy={submitting}>
+      <fieldset disabled={submitting} className="min-w-0 space-y-6 border-0 p-0">
       {/* Anti-spam honeypot */}
       <input
         type="text"
@@ -464,6 +412,15 @@ export function ProjectInquiryForm({
         </span>
       </label>
 
+      <div
+        role="note"
+        className={`p-3.5 rounded-lg border text-xs ${darkSurface ? 'bg-amber-950/40 border-amber-500/30 text-amber-100' : 'bg-amber-50 border-amber-200 text-amber-950'}`}
+      >
+        Your project details are submitted to our inquiry system. For urgent follow-up, email{' '}
+        <a className="font-semibold underline" href={`mailto:${VERIFIED_CONTACT.email}`}>{VERIFIED_CONTACT.email}</a>
+        {' '}or call {VERIFIED_CONTACT.primaryPhone}.
+      </div>
+
       {errorMsg && (
         <div
           role="alert"
@@ -473,10 +430,16 @@ export function ProjectInquiryForm({
         </div>
       )}
 
+      {submitting && (
+        <p role="status" aria-live="polite" className={`text-sm ${darkSurface ? 'text-neutral-300' : 'text-neutral-700'}`}>
+          Submitting your inquiry. Please keep this page open.
+        </p>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div className={`inline-flex items-center gap-1.5 text-xs ${darkSurface ? 'text-neutral-400' : 'text-neutral-500'}`}>
           <Lock className={`w-3.5 h-3.5 ${darkSurface ? 'text-[#FF1A1F]' : 'text-[#E50000]'}`} aria-hidden="true" />
-          <span>Server-validated submission · Confidential inquiry handling</span>
+          <span>Secure submission · Required fields are marked above.</span>
         </div>
 
         <button
@@ -484,9 +447,10 @@ export function ProjectInquiryForm({
           disabled={submitting}
           className="px-6 py-3 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] disabled:opacity-60 text-white rounded-lg transition-colors whitespace-nowrap shrink-0"
         >
-          {submitting ? 'Submitting Brief...' : 'Submit Project Inquiry'}
+          {submitting ? 'Submitting…' : 'Submit Project Inquiry'}
         </button>
       </div>
+      </fieldset>
     </form>
   );
 }
