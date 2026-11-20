@@ -29,20 +29,20 @@ export function WorkPage({ onNavigate, onOpenInquiry }: WorkPageProps) {
         path="/work"
       />
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-14 border-b border-white/10">
-        <p className="inline-flex items-center gap-2.5 text-xs font-semibold tracking-wide text-[#FF1A1F] mb-3">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-14 border-b border-white/10">
+        <p className="inline-flex items-center gap-2.5 text-xs font-semibold tracking-[0.14em] uppercase text-[#FF1A1F] mb-4">
           <span className="w-5 h-0.5 bg-[#ED2126]" aria-hidden="true" />
           <span>Our Work &amp; Case Studies</span>
         </p>
-        <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight max-w-4xl [text-wrap:balance] mb-6">
-          Crafted brand systems, productions, and on-ground activations.
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-[-0.04em] max-w-5xl leading-[1.02] [text-wrap:balance] mb-5 sm:mb-6">
+          Work made to move people.
         </h1>
         <p className="text-sm sm:text-base text-neutral-300 max-w-2xl mb-8 leading-relaxed">
-          Documented brand identity suites, influencer marketing campaigns, store launch activations, corporate events, and digital print productions delivered across Kenya and East Africa.
+          Selected identity, content, creator and activation work from the Exponential Media Africa portfolio.
         </p>
 
         <div
-          role="tablist"
+          role="group"
           aria-label="Filter projects by category"
           className="flex flex-wrap gap-1.5 p-1.5 bg-[#141418] border border-white/10 rounded-xl"
         >
@@ -50,8 +50,7 @@ export function WorkPage({ onNavigate, onOpenInquiry }: WorkPageProps) {
             <button
               key={cat}
               type="button"
-              role="tab"
-              aria-selected={selectedCategory === cat}
+              aria-pressed={selectedCategory === cat}
               onClick={() => setSelectedCategory(cat)}
               className={`px-3.5 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                 selectedCategory === cat
@@ -80,44 +79,44 @@ export function WorkPage({ onNavigate, onOpenInquiry }: WorkPageProps) {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((project) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-10 lg:gap-y-14">
+            {filtered.map((project, index) => (
               <article
                 key={project.id}
-                className="group bg-[#141418] border border-white/10 border-t-2 border-t-[#ED2126] rounded-2xl overflow-hidden hover:border-[#ED2126] transition-colors flex flex-col"
+                className={`group flex flex-col ${index === 0 ? 'md:col-span-2 lg:col-span-2 lg:row-span-2' : 'md:col-span-1 lg:col-span-2'}`}
               >
                 <button
                   type="button"
                   onClick={() => onNavigate(`/work/${project.slug}`)}
                   className="text-left flex-1 flex flex-col"
                 >
-                  <div className="h-64 w-full overflow-hidden">
+                  <div className={`w-full overflow-hidden bg-[#141418] ${index === 0 ? 'aspect-[4/3] lg:aspect-[1/0.82]' : 'aspect-[16/10]'}`}>
                     <OptimizedImage
                       src={project.imageUrl}
                       alt={project.title}
                       width={800}
                       height={600}
                       containerClassName="w-full h-full"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.025] motion-reduce:transform-none"
                     />
                   </div>
-                  <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div className={`${index === 0 ? 'pt-5 sm:pt-7' : 'pt-4'} flex-1 flex flex-col justify-between`}>
                     <div>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400 mb-2">
                         <span className="text-[#FF1A1F] font-semibold">{project.category}</span>
                         <span aria-hidden="true">·</span>
                         <span>{project.clientName}</span>
                       </div>
-                      <h2 className="text-xl font-display font-bold text-white tracking-tight mb-2 group-hover:text-[#FF1A1F] transition-colors">
+                      <h2 className={`${index === 0 ? 'text-2xl sm:text-3xl' : 'text-lg sm:text-xl'} font-display font-bold text-white tracking-tight mb-2 group-hover:text-[#FF1A1F] transition-colors`}>
                         {project.title}
                       </h2>
                       <p className="text-sm text-neutral-300 leading-relaxed line-clamp-3">
                         {project.summary}
                       </p>
                     </div>
-                    <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between text-xs font-semibold text-white">
-                      <span>Open Case Study</span>
-                      <ArrowUpRight className="w-4 h-4 text-[#ED2126]" />
+                    <div className="pt-3 mt-4 border-t border-white/15 flex items-center justify-between text-xs font-semibold text-white/80 group-hover:text-white">
+                      <span>View project</span>
+                      <ArrowUpRight className="w-4 h-4 text-[#ED2126] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </div>
                   </div>
                 </button>
@@ -132,7 +131,7 @@ export function WorkPage({ onNavigate, onOpenInquiry }: WorkPageProps) {
               Have a project in mind?
             </h3>
             <p className="text-sm text-neutral-400">
-              Share your brief and our Nairobi leads will assemble a tailored ecosystem proposal.
+              Online brief submission is paused. Contact our Nairobi team by email, phone or WhatsApp to discuss your project.
             </p>
           </div>
           <button
@@ -140,7 +139,7 @@ export function WorkPage({ onNavigate, onOpenInquiry }: WorkPageProps) {
             onClick={onOpenInquiry}
             className="px-6 py-3 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg transition-colors whitespace-nowrap"
           >
-            Start a Project
+            Contact the Team
           </button>
         </div>
       </section>

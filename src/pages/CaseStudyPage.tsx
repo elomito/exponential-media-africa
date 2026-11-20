@@ -51,7 +51,7 @@ export function CaseStudyPage({ slug, onNavigate, onOpenInquiry }: CaseStudyPage
         breadcrumbName={project.title}
       />
 
-      <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-20">
         <button
           type="button"
           onClick={() => onNavigate('/work')}
@@ -61,7 +61,7 @@ export function CaseStudyPage({ slug, onNavigate, onOpenInquiry }: CaseStudyPage
           <span>Back to Our Work</span>
         </button>
 
-        <div className="flex flex-wrap items-center gap-2.5 text-xs text-neutral-400 mb-4">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs tracking-wide text-neutral-400 mb-5">
           <span className="text-[#FF1A1F] font-bold">{project.category}</span>
           <span aria-hidden="true">·</span>
           <span>{division?.name}</span>
@@ -78,35 +78,40 @@ export function CaseStudyPage({ slug, onNavigate, onOpenInquiry }: CaseStudyPage
           )}
         </div>
 
-        <h1 className="text-3xl sm:text-5xl font-display font-bold tracking-tight [text-wrap:balance] mb-6">
+        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-display font-bold tracking-[-0.045em] leading-[0.98] [text-wrap:balance] max-w-5xl mb-6">
           {project.title}
         </h1>
-        <p className="text-lg text-neutral-300 leading-relaxed max-w-3xl mb-10">
+        <p className="text-lg sm:text-xl text-neutral-300 leading-relaxed max-w-3xl mb-10 sm:mb-14">
           {project.summary}
         </p>
 
-        <div className="rounded-2xl overflow-hidden border border-white/10 mb-14 max-h-[540px]">
+        <figure className="relative overflow-hidden border-y border-white/10 mb-12 sm:mb-16 aspect-[4/3] sm:aspect-[2/1] lg:aspect-[2.4/1] bg-[#141418]">
           <OptimizedImage
             src={project.imageUrl}
             alt={project.title}
             width={1400}
             height={800}
             priority
-            containerClassName="w-full h-full"
-            className="w-full h-full object-cover"
+            containerClassName="absolute inset-0 w-full h-full"
+            className="w-full h-full object-cover object-center"
           />
-        </div>
+          <figcaption className="absolute bottom-0 left-0 right-0 px-4 py-3 sm:px-6 sm:py-4 bg-gradient-to-t from-black/80 to-transparent text-[11px] sm:text-xs text-white/90">
+            {project.category} <span aria-hidden="true">·</span> {project.clientName}
+          </figcaption>
+        </figure>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          <div className="lg:col-span-8 space-y-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+          <div className="lg:col-span-7 space-y-10">
             <section>
-              <h2 className="text-xl font-display font-bold text-white mb-3">
+              <p className="font-mono text-[10px] tracking-[0.18em] text-[#FF3A3F] mb-3">01 / THE BRIEF</p>
+              <h2 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-white mb-4">
                 The Brief &amp; Challenge
               </h2>
               <p className="text-base text-neutral-300 leading-relaxed">{project.challenge}</p>
             </section>
             <section>
-              <h2 className="text-xl font-display font-bold text-white mb-3">
+              <p className="font-mono text-[10px] tracking-[0.18em] text-[#FF3A3F] mb-3">02 / OUR APPROACH</p>
+              <h2 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-white mb-4">
                 The Exponential Approach
               </h2>
               <p className="text-base text-neutral-300 leading-relaxed">{project.solution}</p>

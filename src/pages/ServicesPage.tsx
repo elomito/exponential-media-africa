@@ -26,24 +26,23 @@ export function ServicesPage({ onOpenInquiry }: ServicesPageProps) {
         path="/services"
       />
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-14 border-b border-white/10">
-        <p className="inline-flex items-center gap-2.5 text-xs font-semibold tracking-wide text-[#FF1A1F] mb-3">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-14 border-b border-white/10">
+        <p className="inline-flex items-center gap-2.5 text-xs font-semibold tracking-[0.14em] uppercase text-[#FF1A1F] mb-4">
           <span className="w-5 h-0.5 bg-[#ED2126]" aria-hidden="true" />
           <span>Core Agency Services</span>
         </p>
-        <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight max-w-4xl [text-wrap:balance] mb-6">
-          Six specialized capabilities designed for measurable brand growth.
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight max-w-4xl leading-[1.04] [text-wrap:balance] mb-5 sm:mb-6">
+          One connected team. Six ways to build your brand.
         </h1>
 
         <div
-          role="tablist"
+          role="group"
           aria-label="Filter services by practice area"
           className="inline-flex flex-wrap gap-1.5 p-1.5 bg-[#141418] border border-white/10 rounded-xl mt-4"
         >
           <button
             type="button"
-            role="tab"
-            aria-selected={selectedDivision === 'all'}
+            aria-pressed={selectedDivision === 'all'}
             onClick={() => setSelectedDivision('all')}
             className={`px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
               selectedDivision === 'all'
@@ -57,8 +56,7 @@ export function ServicesPage({ onOpenInquiry }: ServicesPageProps) {
             <button
               key={div.id}
               type="button"
-              role="tab"
-              aria-selected={selectedDivision === div.id}
+              aria-pressed={selectedDivision === div.id}
               onClick={() => setSelectedDivision(div.id)}
               className={`px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
                 selectedDivision === div.id
@@ -76,7 +74,7 @@ export function ServicesPage({ onOpenInquiry }: ServicesPageProps) {
         {visibleDivisions.map((division) => {
           const divisionServices = services.filter((s) => s.division === division.id);
           return (
-            <div key={division.id} className="space-y-8">
+            <div key={division.id} className="space-y-7">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-white/10">
                 <div>
                   <div
@@ -99,22 +97,19 @@ export function ServicesPage({ onOpenInquiry }: ServicesPageProps) {
                 </button>
               </div>
 
-              <div
-                className={`grid grid-cols-1 gap-6 ${
-                  divisionServices.length > 1 ? 'md:grid-cols-2 lg:grid-cols-3' : ''
-                }`}
-              >
-                {divisionServices.map((srv) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
+                {divisionServices.map((srv, serviceIndex) => (
                   <article
                     key={srv.id}
-                    className="p-6 sm:p-8 bg-[#141418] border border-white/10 border-t-2 border-t-[#ED2126] rounded-2xl flex flex-col justify-between gap-6"
+                    className="py-6 sm:py-7 border-t border-white/15 flex flex-col justify-between gap-5"
                   >
                     <div>
-                      <h3 className="text-xl font-display font-bold text-white mb-2">
+                      <div className="font-mono text-[10px] tracking-[0.18em] text-[#FF3A3F] mb-4">{String(serviceIndex + 1).padStart(2, '0')} / {division.shortName.toUpperCase()}</div>
+                      <h3 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white mb-3">
                         {srv.title}
                       </h3>
-                      <p className="text-xs font-medium text-[#FF1A1F] mb-3">
-                        Outcome: {srv.problemSolved}
+                      <p className="text-sm font-medium text-neutral-100 mb-3">
+                        {srv.problemSolved}
                       </p>
                       <p className="text-sm text-neutral-300 leading-relaxed">
                         {srv.description}
@@ -124,9 +119,9 @@ export function ServicesPage({ onOpenInquiry }: ServicesPageProps) {
                       <button
                         type="button"
                         onClick={() => onOpenInquiry(srv.title)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-white/10 hover:bg-[#ED2126] text-white rounded-lg transition-colors"
+                        className="inline-flex items-center gap-2 text-xs font-semibold text-white/75 hover:text-white transition-colors focus-visible:text-white"
                       >
-                        <span>Inquire About This Service</span>
+                        <span>Discuss this service</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
