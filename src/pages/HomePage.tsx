@@ -7,10 +7,10 @@ import { useCms } from '../context/CmsContext';
 import {
   CORE_VALUES,
   DIVISIONS,
-  HERO_POSTER_IMAGE,
   PORTFOLIO_CATEGORIES,
   TERRITORY_MARKETS,
 } from '../data/seedData';
+import { HERO_POSTER_IMAGE } from '../data/heroImage';
 import type { DivisionId, PortfolioCategory } from '../types/cms';
 
 interface HomePageProps {
@@ -82,7 +82,7 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
       />
 
       {/* SECTION 1: HERO */}
-      <section className="relative min-h-[86vh] flex items-end bg-[#0B0B0D] overflow-hidden border-b border-white/10">
+      <section className="relative min-h-[min(820px,calc(100svh-4rem))] flex items-end bg-[#0B0B0D] overflow-hidden border-b border-white/10">
         <div className="absolute inset-0">
           <OptimizedImage
             src={HERO_POSTER_IMAGE}
@@ -91,7 +91,7 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
             width={1920}
             height={1080}
             containerClassName="w-full h-full"
-            className="w-full h-full object-cover object-center opacity-70 scale-[1.01] transition-transform duration-[4000ms] motion-reduce:transform-none"
+            className="w-full h-full object-cover object-[58%_center] opacity-65 scale-[1.01] transition-transform duration-[4000ms] motion-reduce:transform-none"
           />
           <div
             aria-hidden="true"
@@ -103,36 +103,47 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
           />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-28 pb-16 md:pb-24">
-          <div className="max-w-3xl">
-            <p className="inline-flex items-center gap-2.5 text-xs sm:text-sm font-bold tracking-wide text-[#FF1A1F] mb-4">
+        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-12 sm:pb-16 lg:pb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-end">
+          <div className="max-w-4xl lg:col-span-9">
+            <p className="inline-flex items-center gap-2.5 text-xs sm:text-sm font-bold tracking-[0.12em] uppercase text-[#FF1A1F] mb-5">
               <span className="w-6 h-0.5 bg-[#ED2126]" aria-hidden="true" />
               <span>Imaginative Solutions for Exponential Growth · Nairobi, Kenya</span>
             </p>
-            <h1 className="text-4xl sm:text-6xl lg:text-[4.25rem] font-display font-bold tracking-tight leading-[1.03] text-white [text-wrap:balance] mb-6">
-              HELPING BRANDS STAND OUT IN THE DIGITAL AGE.
+            <h1 className="text-[2.65rem] sm:text-6xl lg:text-[5.25rem] font-display font-bold tracking-[-0.045em] leading-[0.98] text-white max-w-5xl [text-wrap:balance] mb-6 sm:mb-7">
+              <span className="block">Helping brands</span>
+              <span className="block text-[#FF3A3F]">stand out.</span>
             </h1>
-            <p className="text-base sm:text-xl text-neutral-200 leading-relaxed max-w-2xl mb-10">
-              Exponential Media Africa unites Visual Design, Content Creation, Social Media Management, Influencer Marketing, Media Buy, and Brand Activations across Kenya, Uganda, Rwanda, DRC, and Zambia.
+            <p className="text-base sm:text-lg text-neutral-200 leading-relaxed max-w-2xl mb-8 sm:mb-10">
+              Exponential Media Africa brings visual design, content creation, social media, influencer marketing, media buying and brand activation together for brands in the region.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-col min-[480px]:flex-row min-[480px]:items-center gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => onNavigate('/work')}
-                className="inline-flex items-center gap-2.5 px-6 py-3.5 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg transition-colors whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-md transition-colors whitespace-nowrap"
               >
                 <span>Explore Our Work</span>
                 <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </button>
               <button
                 type="button"
-                onClick={() => onOpenInquiry()}
-                className="inline-flex items-center gap-2.5 px-6 py-3.5 text-sm font-semibold border border-white/25 text-white hover:bg-white/10 rounded-lg transition-colors whitespace-nowrap"
+                onClick={() => onNavigate('/contact')}
+                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-semibold border border-white/35 text-white hover:bg-white/10 rounded-md transition-colors whitespace-nowrap"
               >
-                <span>Start a Project</span>
+                <span>Talk to our team</span>
               </button>
             </div>
+          </div>
+          <aside className="hidden lg:block lg:col-span-3 border-l border-white/30 pl-5 pb-1 text-sm text-white/85">
+            <div className="font-mono text-[10px] tracking-[0.2em] text-[#FF3A3F] mb-3">WHAT WE DO</div>
+            <ul className="space-y-2.5 text-xs xl:text-sm">
+              {['Social Media Management', 'Content Creation & Marketing', 'Influencer Marketing', 'Media Buying', 'Brand Activation', 'Visual Design'].map((service, index) => (
+                <li key={service} className="flex gap-3"><span className="font-mono text-[10px] text-white/45">0{index + 1}</span><span>{service}</span></li>
+              ))}
+            </ul>
+          </aside>
           </div>
         </div>
       </section>
@@ -302,7 +313,7 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
           </div>
 
           <div
-            role="tablist"
+            role="group"
             aria-label="Filter portfolio by category"
             className="flex flex-wrap items-center gap-1.5 p-1.5 bg-neutral-100 border border-neutral-200 rounded-xl mb-10"
           >
@@ -312,8 +323,7 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
                 <button
                   key={cat}
                   type="button"
-                  role="tab"
-                  aria-selected={selected}
+                  aria-pressed={selected}
                   onClick={() => setActiveCategory(cat)}
                   className={`px-3.5 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                     selected
@@ -413,7 +423,7 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
             </div>
 
             <div
-              role="tablist"
+              role="group"
               aria-label="Filter capabilities by practice area"
               className="flex flex-wrap items-center gap-1.5 p-1.5 bg-[#141418] border border-white/10 rounded-xl"
             >
@@ -423,8 +433,7 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
                   <button
                     key={div.id}
                     type="button"
-                    role="tab"
-                    aria-selected={active}
+                    aria-pressed={active}
                     onClick={() => setActiveCapabilityDivision(div.id)}
                     className={`px-3.5 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                       active
