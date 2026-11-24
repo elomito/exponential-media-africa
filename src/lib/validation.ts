@@ -1,30 +1,242 @@
 import { z } from 'zod';
+import type {
+  ImpactMetricConfig,
+  SiteSettings,
+  TestimonialItem,
+} from '../types/cms';
+
+export const DOC_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+export const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+export const HOSTNAME_PATTERN = /^[a-zA-Z0-9.-]+(:\d{1,5})?$/;
+export const INQUIRY_REFERENCE_PATTERN = /^EMA-\d{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6,12}$/;
+
+const CONTROL_AND_BIDI_CHARS_SINGLELINE =
+  /[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
+
+const CONTROL_AND_BIDI_CHARS_MULTILINE =
+  /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
+
+const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function stripHtmlTagsMultiPass(input: string): string {
+  let prev = input;
+  let next = prev.replace(/<[^<>]*>/g, '');
+  while (next !== prev) {
+    prev = next;
+    next = prev.replace(/<[^<>]*>/g, '');
+  }
+  return next.replace(/<[^<>]*$/g, '');
+}
 
 export function sanitizePlainText(input: string): string {
-  return input
-    .replace(/<[^>]*>?/gm, '')
-    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+  return stripHtmlTagsMultiPass(String(input ?? ''))
+    .replace(/[\t\n\r]/g, ' ')
+    .replace(CONTROL_AND_BIDI_CHARS_SINGLELINE, '')
+    .trim();
+}
+
+export function sanitizeMultilineText(input: string): string {
+  return stripHtmlTagsMultiPass(String(input ?? '').replace(/\r\n?/g, '\n'))
+    .replace(/\t/g, ' ')
+    .replace(CONTROL_AND_BIDI_CHARS_MULTILINE, '')
     .trim();
 }
 
 export function sanitizeSlug(input: string): string {
-  return input
+  return sanitizePlainText(input)
     .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 120);
 }
 
+export function sanitizeTelHref(phone: string): string {
+  const plain = sanitizePlainText(phone);
+  if (!plain || !/^[+0-9()\s.-]+$/.test(plain)) {
+    return '#';
+  }
+  const cleaned = plain.replace(/[^+0-9]/g, '');
+  return /\d{7,}/.test(cleaned) ? `tel:${cleaned}` : '#';
+}
+
+export function sanitizeMailtoHref(email: string): string {
+  const plain = sanitizePlainText(email).toLowerCase();
+  if (!plain || plain.length > 160 || !EMAIL_PATTERN.test(plain) || /[?#&\s\\]/.test(plain)) {
+    return '#';
+  }
+  return `mailto:${plain}`;
+}
+
+export function isValidDocId(id: string): boolean {
+  return DOC_ID_PATTERN.test(id);
+}
+
 export function isSafeHttpOrLocalUrl(url: string): boolean {
   if (!url) return true;
-  if (url.startsWith('/')) return !url.startsWith('//');
+  const trimmed = url.trim();
+  if (!trimmed) return true;
+  if (/[\u0000-\u001F\u007F-\u009F\s]/.test(trimmed)) return false;
+  if (trimmed.startsWith('/')) return !trimmed.startsWith('//') && !trimmed.startsWith('/\\');
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(trimmed);
     return parsed.protocol === 'https:' || parsed.protocol === 'http:';
   } catch {
     return false;
   }
+}
+
+export function isSafeExternalHttpUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (/[\u0000-\u001F\u007F-\u009F\s]/.test(trimmed)) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function cleanExternalSocialUrl(url: string | undefined, fallback = ''): string {
+  const trimmed = sanitizePlainText(url || '');
+  if (
+    !trimmed ||
+    trimmed === 'https://exponentialmedia.africa/' ||
+    trimmed === 'https://exponentialmedia.africa' ||
+    !isSafeExternalHttpUrl(trimmed)
+  ) {
+    return fallback;
+  }
+  return trimmed.slice(0, 300);
+}
+
+export function sanitizeImpactMetric(
+  raw: Partial<ImpactMetricConfig> | undefined,
+  fallback: ImpactMetricConfig
+): ImpactMetricConfig {
+  const label = sanitizePlainText(raw?.label || '').slice(0, 80);
+  const value = sanitizePlainText(raw?.value || '').slice(0, 40);
+  const unitOrContext = sanitizePlainText(raw?.unitOrContext || '').slice(0, 120);
+  return {
+    id: fallback.id,
+    label: label.length >= 2 ? label : fallback.label,
+    value: value.length >= 1 ? value : fallback.value,
+    unitOrContext: unitOrContext.length >= 2 ? unitOrContext : fallback.unitOrContext,
+    isPlaceholder:
+      typeof raw?.isPlaceholder === 'boolean' ? raw.isPlaceholder : fallback.isPlaceholder,
+  };
+}
+
+export function sanitizeSiteSettings(
+  raw: Partial<SiteSettings> | undefined,
+  defaults: SiteSettings
+): SiteSettings {
+  const cleanCompany = sanitizePlainText(raw?.companyName || '').slice(0, 120);
+  const cleanTagline = sanitizePlainText(raw?.tagline || '').slice(0, 240);
+  const cleanEmail = sanitizePlainText(raw?.email || '').toLowerCase().slice(0, 160);
+  const cleanPrimaryPhone = sanitizePlainText(raw?.primaryPhone || '').slice(0, 40);
+  const cleanSecondaryPhone = sanitizePlainText(raw?.secondaryPhone || '').slice(0, 40);
+  const cleanAddress = sanitizePlainText(raw?.headquartersAddress || '').slice(0, 240);
+
+  return {
+    companyName: cleanCompany.length >= 2 ? cleanCompany : defaults.companyName,
+    tagline: cleanTagline.length >= 5 ? cleanTagline : defaults.tagline,
+    email:
+      EMAIL_PATTERN.test(cleanEmail) && !/[?#&\s\\]/.test(cleanEmail)
+        ? cleanEmail
+        : defaults.email,
+    primaryPhone: /^[+0-9()\s-]{5,40}$/.test(cleanPrimaryPhone)
+      ? cleanPrimaryPhone
+      : defaults.primaryPhone,
+    secondaryPhone: !cleanSecondaryPhone
+      ? ''
+      : /^[+0-9()\s-]{5,40}$/.test(cleanSecondaryPhone)
+        ? cleanSecondaryPhone
+        : defaults.secondaryPhone || '',
+    headquartersAddress:
+      cleanAddress.length >= 5 ? cleanAddress : defaults.headquartersAddress,
+    campusAddress: '',
+    socialLinks: {
+      instagram: cleanExternalSocialUrl(
+        raw?.socialLinks?.instagram,
+        defaults.socialLinks.instagram
+      ),
+      linkedin: cleanExternalSocialUrl(
+        raw?.socialLinks?.linkedin,
+        defaults.socialLinks.linkedin
+      ),
+      youtube: cleanExternalSocialUrl(raw?.socialLinks?.youtube),
+      x: cleanExternalSocialUrl(raw?.socialLinks?.x),
+    },
+    impactMetrics: {
+      projectsCompleted: sanitizeImpactMetric(
+        raw?.impactMetrics?.projectsCompleted,
+        defaults.impactMetrics.projectsCompleted
+      ),
+      brandsServed: sanitizeImpactMetric(
+        raw?.impactMetrics?.brandsServed,
+        defaults.impactMetrics.brandsServed
+      ),
+      campaignsExecuted: sanitizeImpactMetric(
+        raw?.impactMetrics?.campaignsExecuted,
+        defaults.impactMetrics.campaignsExecuted
+      ),
+      yearsExperience: sanitizeImpactMetric(
+        raw?.impactMetrics?.yearsExperience,
+        defaults.impactMetrics.yearsExperience
+      ),
+      geographicReach: sanitizeImpactMetric(
+        raw?.impactMetrics?.geographicReach,
+        defaults.impactMetrics.geographicReach
+      ),
+    },
+  };
+}
+
+export function sanitizeTestimonialRecord(
+  id: string,
+  raw: Omit<TestimonialItem, 'id'>
+): TestimonialItem {
+  const cleanVideoUrl = sanitizePlainText(raw.videoUrl || '').slice(0, 500);
+  return {
+    id,
+    quote: sanitizePlainText(raw.quote || '').slice(0, 1000),
+    clientName: sanitizePlainText(raw.clientName || '').slice(0, 100),
+    clientRole: sanitizePlainText(raw.clientRole || '').slice(0, 120),
+    companyName: sanitizePlainText(raw.companyName || '').slice(0, 120),
+    videoUrl: cleanVideoUrl && isSafeExternalHttpUrl(cleanVideoUrl) ? cleanVideoUrl : undefined,
+    isPlaceholder: Boolean(raw.isPlaceholder),
+    status: raw.status === 'published' ? 'published' : 'draft',
+    isDeleted: Boolean(raw.isDeleted),
+  };
+}
+
+/**
+ * Inspects parsed JSON input payloads for prototype-pollution keys,
+ * NoSQL operator injection keys (`$where`, `$ne`, dotted paths),
+ * excessive recursion depth, or unbounded array fan-out.
+ */
+export function hasUnsafeJsonPayload(value: unknown, depth = 0, maxDepth = 8): boolean {
+  if (depth > maxDepth) return true;
+  if (value === null || value === undefined) return false;
+  if (typeof value !== 'object') return false;
+
+  if (Array.isArray(value)) {
+    if (value.length > 200) return true;
+    return value.some((item) => hasUnsafeJsonPayload(item, depth + 1, maxDepth));
+  }
+
+  for (const key of Object.keys(value as Record<string, unknown>)) {
+    if (FORBIDDEN_OBJECT_KEYS.has(key) || key.startsWith('$') || key.includes('.')) {
+      return true;
+    }
+    const propVal = (value as Record<string, unknown>)[key];
+    if (hasUnsafeJsonPayload(propVal, depth + 1, maxDepth)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export const projectInquirySchema = z.object({
