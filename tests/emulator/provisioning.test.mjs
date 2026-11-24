@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   adminAuth,
   createUser,
@@ -11,7 +14,17 @@ import {
   seedRole,
 } from './helpers.mjs';
 
-const TSX = './node_modules/.bin/tsx';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const TSX_PACKAGE_PATH = path.join(ROOT, 'node_modules', 'tsx', 'package.json');
+const TSX_PACKAGE = JSON.parse(fs.readFileSync(TSX_PACKAGE_PATH, 'utf8'));
+const TSX_BIN = typeof TSX_PACKAGE.bin === 'string' ? TSX_PACKAGE.bin : TSX_PACKAGE.bin?.tsx;
+if (typeof TSX_BIN !== 'string') {
+  throw new Error(`Could not resolve the tsx executable from ${TSX_PACKAGE_PATH}.`);
+}
+const TSX_ENTRY = path.resolve(path.dirname(TSX_PACKAGE_PATH), TSX_BIN);
+if (!fs.existsSync(TSX_ENTRY)) {
+  throw new Error(`The tsx executable declared by ${TSX_PACKAGE_PATH} does not exist: ${TSX_ENTRY}`);
+}
 const baseEnv = {
   ...process.env,
   FIREBASE_PROJECT_ID: 'demo-exponential-local',
@@ -27,7 +40,14 @@ function runProvision(extraEnv) {
   for (const key of Object.keys(env)) {
     if (env[key] === undefined) delete env[key];
   }
-  const result = spawnSync(TSX, ['scripts/provision-admin.ts'], { env, encoding: 'utf8', timeout: 60_000 });
+  const result = spawnSync(process.execPath, [TSX_ENTRY, 'scripts/provision-admin.ts'], {
+    env,
+    encoding: 'utf8',
+    timeout: 60_000,
+  });
+  if (result.error) {
+    throw new Error(`Could not start the admin provisioning script: ${result.error.message}`, { cause: result.error });
+  }
   return { code: result.status, stdout: result.stdout || '', stderr: result.stderr || '' };
 }
 

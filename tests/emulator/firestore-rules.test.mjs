@@ -194,7 +194,7 @@ test('newsletter subscription writes stay disabled', async () => {
 
 test('site settings remain read-only to the public', async () => {
   await adminDb.collection('site_settings').doc('main').set({
-    companyName: 'Exponential Media Africa',
+    companyName: 'Exponential Marketing Agency',
     tagline: 'Imaginative Solutions for Exponential Growth.',
     email: 'info@exponentialmedia.africa',
     primaryPhone: '+254 728 231 221',

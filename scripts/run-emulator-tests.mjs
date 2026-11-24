@@ -18,7 +18,16 @@ import {
 } from '../tests/emulator/expected-config.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TSX = path.join(ROOT, 'node_modules', '.bin', 'tsx');
+const TSX_PACKAGE_PATH = path.join(ROOT, 'node_modules', 'tsx', 'package.json');
+const TSX_PACKAGE = JSON.parse(fs.readFileSync(TSX_PACKAGE_PATH, 'utf8'));
+const TSX_BIN = typeof TSX_PACKAGE.bin === 'string' ? TSX_PACKAGE.bin : TSX_PACKAGE.bin?.tsx;
+if (typeof TSX_BIN !== 'string') {
+  throw new Error(`Could not resolve the tsx executable from ${TSX_PACKAGE_PATH}.`);
+}
+const TSX_ENTRY = path.resolve(path.dirname(TSX_PACKAGE_PATH), TSX_BIN);
+if (!fs.existsSync(TSX_ENTRY)) {
+  throw new Error(`The tsx executable declared by ${TSX_PACKAGE_PATH} does not exist: ${TSX_ENTRY}`);
+}
 const FIREBASE_JSON = path.join(ROOT, 'firebase.json');
 const AUTH_PORT = Number(AUTH_EMULATOR_HOST.split(':')[1]);
 const FIRESTORE_PORT = Number(FIRESTORE_EMULATOR_HOST.split(':')[1]);
@@ -49,7 +58,8 @@ let appProcess = null;
 let testProcess = null;
 let abortRequested = false;
 let shuttingDown = false;
-let cleanupChain = Promise.resolve();
+let cleanupPromise = null;
+const trackedChildren = new Set();
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -63,6 +73,38 @@ function stripAnsi(value) {
 
 function readFirebaseJson() {
   return JSON.parse(fs.readFileSync(FIREBASE_JSON, 'utf8'));
+}
+
+function trackChild(child, label) {
+  const record = {
+    child,
+    label,
+    pid: child.pid,
+    error: null,
+    exited: false,
+    exitCode: null,
+    signal: null,
+    closed: false,
+    stopping: false,
+  };
+  trackedChildren.add(record);
+  child.on('error', (error) => {
+    record.error = error;
+  });
+  child.once('exit', (code, signal) => {
+    record.exited = true;
+    record.exitCode = code;
+    record.signal = signal;
+    if (!record.stopping && !shuttingDown && ['Firebase emulators', 'application server'].includes(label)) {
+      const logPath = label === 'Firebase emulators' ? emulatorLogPath : appLogPath;
+      console.error(`${label} exited unexpectedly (code ${code}, signal ${signal}). See ${logPath}.`);
+    }
+  });
+  child.once('close', () => {
+    record.closed = true;
+    trackedChildren.delete(record);
+  });
+  return record;
 }
 
 function assertInheritedEnvironment() {
@@ -119,7 +161,12 @@ function resolveFirebaseCli() {
   if (process.env.FIREBASE_CLI) candidates.push(process.env.FIREBASE_CLI);
   for (const directory of (process.env.PATH || '').split(path.delimiter)) {
     if (!directory) continue;
-    candidates.push(path.join(directory, process.platform === 'win32' ? 'firebase.cmd' : 'firebase'));
+    if (process.platform === 'win32') {
+      candidates.push(path.join(directory, 'firebase.exe'));
+      candidates.push(path.join(directory, 'firebase.cmd'));
+    } else {
+      candidates.push(path.join(directory, 'firebase'));
+    }
   }
   const npxRoot = path.join(os.homedir(), '.npm', '_npx');
   if (fs.existsSync(npxRoot)) {
@@ -137,9 +184,22 @@ function resolveFirebaseCli() {
         '(or to firebase-tools/lib/bin/firebase.js). See docs/emulator-testing.md.',
     );
   }
-  return found.endsWith('.js')
-    ? { command: process.execPath, args: [found], display: found }
-    : { command: found, args: [], display: found };
+  if (found.endsWith('.js')) {
+    return { command: process.execPath, args: [found], display: found };
+  }
+  if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(found)) {
+    return { command: process.env.ComSpec || 'cmd.exe', windowsScript: found, display: found };
+  }
+  return { command: found, args: [], display: found };
+}
+
+function firebaseCliArgs(cli, args) {
+  if (!cli.windowsScript) return [...(cli.args || []), ...args];
+  const command = [
+    `"${cli.windowsScript}"`,
+    ...args.map((argument) => `"${String(argument).replace(/"/g, '""')}"`),
+  ].join(' ');
+  return ['/d', '/s', '/c', `"${command}"`];
 }
 
 function baseEnvironment() {
@@ -236,23 +296,31 @@ async function assertPortsFree() {
   }
 }
 
-function spawnLogged(command, args, options, logPath) {
+function spawnLogged(command, args, options, logPath, label) {
   const logFd = fs.openSync(logPath, 'a');
-  const child = spawn(command, args, {
-    ...options,
-    detached: true,
-    stdio: ['ignore', logFd, logFd],
-  });
-  fs.closeSync(logFd);
-  return child;
+  try {
+    const child = spawn(command, args, {
+      ...options,
+      detached: process.platform !== 'win32',
+      stdio: ['ignore', logFd, logFd],
+    });
+    return trackChild(child, label);
+  } finally {
+    fs.closeSync(logFd);
+  }
 }
 
 async function waitForHttp(url, { timeoutMs = 60_000, child, label } = {}) {
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
   while (Date.now() < deadline) {
-    if (child && child.exitCode !== null) {
-      fail(`${label || url} exited before becoming ready (code ${child.exitCode}). See ${logsDir}.`);
+    if (child?.error) {
+      fail(`${label || url} failed to start: ${child.error.message}. See ${logsDir}.`);
+    }
+    if (child?.exited) {
+      fail(
+        `${label || url} exited before becoming ready (code ${child.exitCode}, signal ${child.signal}). See ${logsDir}.`,
+      );
     }
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
@@ -306,8 +374,7 @@ async function startEmulators(cli) {
   if (abortRequested) fail('Run interrupted before the emulators started.');
   emulatorProcess = spawnLogged(
     cli.command,
-    [
-      ...cli.args,
+    firebaseCliArgs(cli, [
       'emulators:start',
       '--only',
       'auth,firestore',
@@ -315,15 +382,11 @@ async function startEmulators(cli) {
       PROJECT_ID,
       '--config',
       FIREBASE_JSON,
-    ],
+    ]),
     { cwd: ROOT, env: emulatorEnvironment() },
     emulatorLogPath,
+    'Firebase emulators',
   );
-  emulatorProcess.once('exit', (code, signal) => {
-    if (!shuttingDown) {
-      console.error(`Firebase emulators exited unexpectedly (code ${code}, signal ${signal}). See ${emulatorLogPath}.`);
-    }
-  });
   if (abortRequested) {
     await stopEmulators();
     fail('Run interrupted while the emulators were starting.');
@@ -336,7 +399,13 @@ async function startApplicationServer() {
   if (abortRequested) fail('Run interrupted before the application server started.');
   console.log('Starting application server (with embedded Vite dev server)...');
   const offset = fs.existsSync(appLogPath) ? fs.statSync(appLogPath).size : 0;
-  appProcess = spawnLogged(TSX, ['server.ts'], { cwd: ROOT, env: applicationEnvironment() }, appLogPath);
+  appProcess = spawnLogged(
+    process.execPath,
+    [TSX_ENTRY, 'server.ts'],
+    { cwd: ROOT, env: applicationEnvironment() },
+    appLogPath,
+    'application server',
+  );
   if (abortRequested) {
     await stopApplicationServer();
     fail('Run interrupted while the application server was starting.');
@@ -353,20 +422,20 @@ function processGroupExists(pgid) {
   } catch (error) {
     if (error.code === 'ESRCH') return false;
     if (error.code === 'EPERM') return true;
-    console.error(`Warning: unable to inspect process group ${pgid}: ${error.message}`);
-    return true;
+    throw new Error(`Unable to inspect process group ${pgid}: ${error.message}`, { cause: error });
   }
 }
 
 function signalProcessGroup(pgid, signal) {
-  if (!pgid) return false;
+  if (!Number.isSafeInteger(pgid) || pgid <= 0) {
+    throw new Error(`Refusing to signal an invalid process-group ID: ${pgid}.`);
+  }
   try {
     process.kill(-pgid, signal);
     return true;
   } catch (error) {
     if (error.code === 'ESRCH') return false;
-    console.error(`Warning: unable to send ${signal} to process group ${pgid}: ${error.message}`);
-    return false;
+    throw new Error(`Unable to send ${signal} to process group ${pgid}: ${error.message}`, { cause: error });
   }
 }
 
@@ -379,15 +448,86 @@ async function waitForProcessGroupExit(pgid, timeoutMs) {
   return !processGroupExists(pgid);
 }
 
-async function stopProcess(child, label) {
-  const pgid = child?.pid;
-  if (!pgid || !processGroupExists(pgid)) return;
-  signalProcessGroup(pgid, 'SIGTERM');
-  if (await waitForProcessGroupExit(pgid, 5_000)) return;
-  console.error(`Warning: ${label} process group ${pgid} did not exit after SIGTERM; sending SIGKILL.`);
-  signalProcessGroup(pgid, 'SIGKILL');
-  if (await waitForProcessGroupExit(pgid, 2_000)) return;
-  console.error(`Warning: ${label} process group ${pgid} may still be running.`);
+function runTaskkill(pid, label) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      'taskkill.exe',
+      ['/PID', String(pid), '/T', '/F'],
+      { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    const record = trackChild(child, `taskkill for ${label}`);
+    let output = '';
+    let settled = false;
+    child.stdout.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    child.once('error', (error) => {
+      if (settled) return;
+      settled = true;
+      const failure = new Error(`Could not start taskkill for ${label} process tree ${pid}: ${error.message}`, {
+        cause: error,
+      });
+      reject(failure);
+    });
+    child.once('close', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      if (code !== 0) {
+        const detail = output.trim() || `taskkill exited with code ${code}, signal ${signal}`;
+        reject(new Error(`Could not terminate ${label} process tree ${pid}: ${detail}`));
+        return;
+      }
+      record.closed = true;
+      resolve();
+    });
+  });
+}
+
+function childHasExited(record) {
+  return record.exited || record.child.exitCode !== null || record.child.signalCode !== null;
+}
+
+async function waitForChildExit(record, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (childHasExited(record)) return true;
+    await sleep(100);
+  }
+  return childHasExited(record);
+}
+
+async function stopProcess(record, label) {
+  if (!record) return;
+  record.stopping = true;
+  const pid = record.pid;
+  if (!Number.isSafeInteger(pid) || pid <= 0) {
+    if (record.error) return;
+    throw new Error(`Cannot stop ${label}: no valid child process ID was assigned.`);
+  }
+
+  if (process.platform === 'win32') {
+    if (childHasExited(record)) {
+      throw new Error(
+        `Cannot verify cleanup of ${label} process tree ${pid}: the tracked process exited before tree termination.`,
+      );
+    }
+    await runTaskkill(pid, label);
+    if (!(await waitForChildExit(record, 5_000))) {
+      throw new Error(`${label} process ${pid} did not exit after taskkill terminated its process tree.`);
+    }
+    return;
+  }
+
+  if (!processGroupExists(pid)) return;
+  signalProcessGroup(pid, 'SIGTERM');
+  if (await waitForProcessGroupExit(pid, 5_000)) return;
+  console.error(`Warning: ${label} process group ${pid} did not exit after SIGTERM; sending SIGKILL.`);
+  signalProcessGroup(pid, 'SIGKILL');
+  if (await waitForProcessGroupExit(pid, 2_000)) return;
+  throw new Error(`${label} process group ${pid} is still running after SIGKILL.`);
 }
 
 async function stopApplicationServer() {
@@ -405,15 +545,33 @@ async function stopEmulators() {
 async function cleanup() {
   abortRequested = true;
   shuttingDown = true;
-  const run = cleanupChain.then(async () => {
-    const child = testProcess;
+  if (cleanupPromise) return cleanupPromise;
+  cleanupPromise = (async () => {
+    const processes = new Map();
+    if (testProcess) processes.set(testProcess, 'test runner');
+    if (appProcess) processes.set(appProcess, 'application server');
+    if (emulatorProcess) processes.set(emulatorProcess, 'Firebase emulators');
+    for (const record of trackedChildren) {
+      if (!record.label.startsWith('taskkill for') && !processes.has(record)) {
+        processes.set(record, record.label);
+      }
+    }
     testProcess = null;
-    await stopProcess(child, 'test runner');
-    await stopApplicationServer();
-    await stopEmulators();
-  });
-  cleanupChain = run.catch(() => {});
-  await run;
+    appProcess = null;
+    emulatorProcess = null;
+    const failures = [];
+    for (const [record, label] of processes) {
+      try {
+        await stopProcess(record, label);
+      } catch (error) {
+        failures.push(`${label}: ${error instanceof Error ? error.message : error}`);
+      }
+    }
+    if (failures.length > 0) {
+      throw new Error(`One or more child processes could not be cleaned up:\n- ${failures.join('\n- ')}`);
+    }
+  })();
+  return cleanupPromise;
 }
 
 function parseCounts(output) {
@@ -440,11 +598,13 @@ function runSuite(suite, env) {
     const child = spawn(
       process.execPath,
       ['--experimental-strip-types', '--test', '--test-concurrency=1', suite.file],
-      { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'], detached: true },
+      { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32' },
     );
-    testProcess = child;
-    if (abortRequested) signalProcessGroup(child.pid, 'SIGKILL');
+    const record = trackChild(child, `${suite.name} test runner`);
+    testProcess = record;
     let output = '';
+    let settled = false;
+    let timeoutError = null;
     child.stdout.on('data', (chunk) => {
       output += chunk.toString();
       process.stdout.write(chunk);
@@ -453,10 +613,38 @@ function runSuite(suite, env) {
       output += chunk.toString();
       process.stderr.write(chunk);
     });
-    const timer = setTimeout(() => signalProcessGroup(child.pid, 'SIGKILL'), 240_000);
+    const timer = setTimeout(() => {
+      timeoutError = new Error(`${suite.name} test runner exceeded the four-minute timeout.`);
+      void stopProcess(record, `${suite.name} test runner`).catch((error) => {
+        const failure = new Error(
+          `${timeoutError.message} Process-tree termination failed: ${error.message}`,
+          { cause: error },
+        );
+        if (settled) {
+          console.error(failure.message);
+          process.exitCode = 1;
+          return;
+        }
+        settled = true;
+        reject(failure);
+      });
+    }, 240_000);
+    child.once('error', (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      testProcess = null;
+      reject(new Error(`Could not start ${suite.name} test runner: ${error.message}`, { cause: error }));
+    });
     child.once('close', (code, signal) => {
       clearTimeout(timer);
       testProcess = null;
+      if (settled) return;
+      settled = true;
+      if (timeoutError) {
+        reject(timeoutError);
+        return;
+      }
       resolve({ code, signal, counts: parseCounts(output) });
     });
   });
@@ -486,7 +674,7 @@ async function main() {
 
   for (const suite of SUITES) {
     if (abortRequested) fail('Run interrupted.');
-    if (emulatorProcess && emulatorProcess.exitCode !== null) {
+    if (emulatorProcess && emulatorProcess.exited) {
       fail(`Firebase emulators exited before suite ${suite.name}. See ${emulatorLogPath}.`);
     }
     if (suite.needsServer) {
@@ -524,15 +712,22 @@ async function main() {
   }
 }
 
-process.on('SIGINT', async () => {
-  console.error('\nInterrupted; shutting down test processes.');
-  await cleanup();
-  process.exit(130);
+async function handleSignal(signal, exitCode) {
+  console.error(`\n${signal} received; shutting down test processes.`);
+  try {
+    await cleanup();
+  } catch (error) {
+    console.error(`Cleanup failed: ${error instanceof Error ? error.message : error}`);
+    process.exitCode = 1;
+  }
+  process.exit(exitCode);
+}
+
+process.on('SIGINT', () => {
+  void handleSignal('SIGINT', 130);
 });
-process.on('SIGTERM', async () => {
-  console.error('\nTerminated; shutting down test processes.');
-  await cleanup();
-  process.exit(143);
+process.on('SIGTERM', () => {
+  void handleSignal('SIGTERM', 143);
 });
 
 main()
@@ -541,5 +736,10 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await cleanup();
+    try {
+      await cleanup();
+    } catch (error) {
+      console.error(`Cleanup failed: ${error instanceof Error ? error.message : error}`);
+      process.exitCode = 1;
+    }
   });
