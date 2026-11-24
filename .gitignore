@@ -7,5 +7,5 @@ coverage/
 .env*
 !.env.example
 .aistudio/
-public/assets/aistudio/
+.playwright-cli/
 server.js
