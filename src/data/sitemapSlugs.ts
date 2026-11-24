@@ -1,4 +1,13 @@
 // Pure TypeScript slug manifest with zero binary/image imports so server.ts can emit complete XML sitemaps safely in Node.js
+export const PUBLIC_SERVICE_SLUGS = [
+  'social-media-management',
+  'content-creation-and-marketing',
+  'influencer-marketing',
+  'media-buying',
+  'brand-activation',
+  'visual-design',
+] as const;
+
 export const PUBLIC_WORK_SLUGS = [
   'pepsi-kenya-market-entry-influencer-campaign',
   'ocean-basket-westgate-influencer-engagement',
