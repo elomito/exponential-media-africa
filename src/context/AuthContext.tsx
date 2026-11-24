@@ -65,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch('/api/auth/session', {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',
+          signal: AbortSignal.timeout(8000),
         });
         if (!response.ok) throw new Error('Authorization could not be verified.');
         const result: unknown = await response.json();

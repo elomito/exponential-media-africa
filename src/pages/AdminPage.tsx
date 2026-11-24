@@ -1,14 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  collection,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore';
-import {
   Database,
   Eye,
   FileText,
@@ -26,20 +17,22 @@ import {
 import { SeoHead } from '../components/SeoHead';
 import { useAuth } from '../context/AuthContext';
 import { useCms } from '../context/CmsContext';
+import { useLanguage } from '../context/LanguageContext';
+import { PORTFOLIO_CATEGORIES } from '../data/seedData';
 import {
-  DEFAULT_ARTICLES,
-  DEFAULT_CLIENT_LOGOS,
-  DEFAULT_PORTFOLIO_PROJECTS,
-  DEFAULT_SERVICES,
-  DEFAULT_SITE_SETTINGS,
-  DEFAULT_TEAM_MEMBERS,
-  DEFAULT_TESTIMONIALS,
-  PORTFOLIO_CATEGORIES,
-} from '../data/seedData';
-import { HERO_POSTER_IMAGE } from '../data/heroImage';
-import { db } from '../lib/firebase';
-import { OperationType, handleFirestoreError } from '../lib/firestore-errors';
-import { isSafeHttpOrLocalUrl, sanitizePlainText, sanitizeSlug } from '../lib/validation';
+  type CmsManagedCollection,
+  createDraftArticle,
+  createDraftClientLogo,
+  createDraftProject,
+  createDraftTeamMember,
+  loadAdminCmsData,
+  provisionStaffRoleViaApi,
+  saveVerifiedSiteSettings,
+  seedDefaultCmsContent,
+  updateCmsDocumentFields,
+  updateInquiryStatusViaApi,
+  updateStaffRoleViaApi,
+} from '../lib/admin-cms';
 import type {
   AdminUserRecord,
   ArticleCategory,
@@ -52,8 +45,8 @@ import type {
   PortfolioProject,
   ProjectInquiry,
   SiteSettings,
-  TeamMember,
   StaffRole,
+  TeamMember,
 } from '../types/cms';
 
 type AdminTab =
@@ -69,18 +62,28 @@ type AdminTab =
 
 export function AdminPage() {
   const {
-    user, role, authReady, isAuthorizedStaff, authError, signInWithGoogle,
-    mfaFactors, mfaSelectedFactorUid, mfaVerificationSent,
-    startMfaChallenge, completeMfaSignIn, cancelMfaChallenge, signOut,
+    user,
+    role,
+    authReady,
+    isAuthorizedStaff,
+    authError,
+    signInWithGoogle,
+    mfaFactors,
+    mfaSelectedFactorUid,
+    mfaVerificationSent,
+    startMfaChallenge,
+    completeMfaSignIn,
+    cancelMfaChallenge,
+    signOut,
   } = useAuth();
-  const { refreshPublicContent } = useCms();
+  const { settings, refreshPublicContent } = useCms();
+  const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('portfolio');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
 
-  // CMS Data States
   const [cmsProjects, setCmsProjects] = useState<PortfolioProject[]>([]);
   const [cmsArticles, setCmsArticles] = useState<InsightArticle[]>([]);
   const [cmsTeamMembers, setCmsTeamMembers] = useState<TeamMember[]>([]);
@@ -88,9 +91,8 @@ export function AdminPage() {
   const [inquiries, setInquiries] = useState<ProjectInquiry[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUserRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
-  const [editableSettings, setEditableSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const [editableSettings, setEditableSettings] = useState<SiteSettings>(settings);
 
-  // Quick Create States
   const [newProjTitle, setNewProjTitle] = useState('');
   const [newProjCategory, setNewProjCategory] = useState<PortfolioCategory>('Branding');
   const [newProjDivision, setNewProjDivision] = useState<DivisionId>('creative');
@@ -104,7 +106,7 @@ export function AdminPage() {
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRole, setNewMemberRole] = useState('');
-  const [newMemberDivision, setNewMemberDivision] = useState('Exponential Media Africa');
+  const [newMemberDivision, setNewMemberDivision] = useState('Exponential Marketing Agency');
   const [newMemberBio, setNewMemberBio] = useState('');
   const [newMemberPhotoUrl, setNewMemberPhotoUrl] = useState('');
 
@@ -118,42 +120,24 @@ export function AdminPage() {
 
   const isAdmin = role === 'admin';
 
+  useEffect(() => {
+    setEditableSettings(settings);
+  }, [settings]);
+
   const loadAdminData = useCallback(async () => {
     if (!isAuthorizedStaff) return;
     setBusy(true);
     try {
-      const [projSnap, artSnap, teamSnap, clientSnap] = await Promise.all([
-        getDocs(collection(db, 'portfolio_projects')),
-        getDocs(collection(db, 'articles')),
-        getDocs(collection(db, 'team_members')),
-        getDocs(collection(db, 'client_logos')),
-      ]);
-
-      setCmsProjects(
-        projSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as PortfolioProject)
-      );
-      setCmsArticles(
-        artSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as InsightArticle)
-      );
-      setCmsTeamMembers(
-        teamSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as TeamMember)
-      );
-      setCmsClientLogos(
-        clientSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as ClientLogo)
-      );
-
+      const snapshot = await loadAdminCmsData(isAdmin);
+      setCmsProjects(snapshot.projects);
+      setCmsArticles(snapshot.articles);
+      setCmsTeamMembers(snapshot.teamMembers);
+      setCmsClientLogos(snapshot.clientLogos);
       if (isAdmin) {
-        const [inqSnap, usersSnap, logsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'inquiries'), orderBy('createdAt', 'desc'))),
-          getDocs(collection(db, 'users')),
-          getDocs(query(collection(db, 'audit_logs'), orderBy('createdAt', 'desc'))),
-        ]);
-        setInquiries(inqSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as ProjectInquiry));
-        setAdminUsers(usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as AdminUserRecord));
-        setAuditLogs(logsSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as AuditLogRecord));
+        setInquiries(snapshot.inquiries);
+        setAdminUsers(snapshot.adminUsers);
+        setAuditLogs(snapshot.auditLogs);
       }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'admin_console');
     } finally {
       setBusy(false);
     }
@@ -161,313 +145,193 @@ export function AdminPage() {
 
   useEffect(() => {
     if (isAuthorizedStaff) {
-      loadAdminData();
+      void loadAdminData();
     }
   }, [isAuthorizedStaff, loadAdminData]);
 
-  const handleSeedCmsContent = async () => {
-    if (!isAdmin) return;
+  const runCmsMutation = async (
+    action: () => Promise<void>,
+    successMsg: string,
+    refreshPublic = true
+  ) => {
     setBusy(true);
     setStatusMessage(null);
     try {
-      await setDoc(doc(db, 'site_settings', 'main'), {
-        ...DEFAULT_SITE_SETTINGS,
-        updatedAt: new Date().toISOString(),
-      });
-      await Promise.all([
-        ...DEFAULT_PORTFOLIO_PROJECTS.map((p) => {
-          const { id, ...rest } = p;
-          return setDoc(doc(db, 'portfolio_projects', id), rest);
-        }),
-        ...DEFAULT_SERVICES.map((s) => {
-          const { id, ...rest } = s;
-          return setDoc(doc(db, 'services', id), rest);
-        }),
-        ...DEFAULT_ARTICLES.map((a) => {
-          const { id, ...rest } = a;
-          return setDoc(doc(db, 'articles', id), rest);
-        }),
-        ...DEFAULT_TESTIMONIALS.map((t) => {
-          const { id, ...rest } = t;
-          return setDoc(doc(db, 'testimonials', id), rest);
-        }),
-        ...DEFAULT_CLIENT_LOGOS.map((l) => {
-          const { id, ...rest } = l;
-          return setDoc(doc(db, 'client_logos', id), rest);
-        }),
-        ...DEFAULT_TEAM_MEMBERS.map((m) => {
-          const { id, ...rest } = m;
-          return setDoc(doc(db, 'team_members', id), rest);
-        }),
-      ]);
-
+      await action();
       await loadAdminData();
-      await refreshPublicContent();
-      setStatusMessage('Initial CMS content successfully synchronized to Firestore.');
+      if (refreshPublic) {
+        await refreshPublicContent();
+      }
+      setStatusMessage(successMsg);
     } catch (error) {
-      console.error(error);
-      setStatusMessage('Error seeding CMS collections. Check permissions.');
+      setStatusMessage(
+        error instanceof Error ? error.message : 'Unable to complete the requested operation.'
+      );
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleSeedCmsContent = async () => {
+    if (!isAdmin) return;
+    await runCmsMutation(
+      () => seedDefaultCmsContent(),
+      'Initial CMS content successfully synchronized to Firestore.'
+    );
   };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProjTitle.trim() || !newProjSummary.trim()) return;
-    setBusy(true);
-    try {
-      const id = `proj-${Date.now()}`;
-      const slug = sanitizeSlug(newProjTitle) || id;
-      const payload = {
-        slug,
-        title: sanitizePlainText(newProjTitle),
-        category: newProjCategory,
-        division: newProjDivision,
-        clientName: sanitizePlainText(newProjClient || 'Authorised Client'),
-        summary: sanitizePlainText(newProjSummary),
-        challenge: 'Project brief and strategic challenge captured via Exponential Staff CMS.',
-        solution: 'Integrated creative, studio, and marketing delivery executed by Exponential Media Africa.',
-        deliverables: ['Strategy & Execution'],
-        imageUrl: HERO_POSTER_IMAGE,
-        isPlaceholder: false,
-        featured: true,
-        status: 'draft' as ContentStatus,
-        isDeleted: false,
-      };
-      await setDoc(doc(db, 'portfolio_projects', id), payload);
-      setNewProjTitle('');
-      setNewProjClient('');
-      setNewProjSummary('');
-      await loadAdminData();
-      setStatusMessage('Draft portfolio project created.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const toggleProjectStatus = async (project: PortfolioProject) => {
-    const nextStatus: ContentStatus = project.status === 'published' ? 'draft' : 'published';
-    await updateDoc(doc(db, 'portfolio_projects', project.id), { status: nextStatus });
-    await loadAdminData();
-    await refreshPublicContent();
-  };
-
-  const softDeleteProject = async (project: PortfolioProject) => {
-    await updateDoc(doc(db, 'portfolio_projects', project.id), { isDeleted: !project.isDeleted });
-    await loadAdminData();
-    await refreshPublicContent();
+    await runCmsMutation(
+      async () => {
+        await createDraftProject({
+          title: newProjTitle,
+          category: newProjCategory,
+          division: newProjDivision,
+          clientName: newProjClient,
+          summary: newProjSummary,
+        });
+        setNewProjTitle('');
+        setNewProjClient('');
+        setNewProjSummary('');
+      },
+      'Draft portfolio project created.',
+      false
+    );
   };
 
   const handleCreateArticle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newArtTitle.trim() || !newArtExcerpt.trim() || !newArtBody.trim()) return;
-    setBusy(true);
-    try {
-      const id = `art-${Date.now()}`;
-      const payload = {
-        slug: sanitizeSlug(newArtTitle) || id,
-        title: sanitizePlainText(newArtTitle),
-        category: newArtCategory,
-        excerpt: sanitizePlainText(newArtExcerpt),
-        body: sanitizePlainText(newArtBody),
-        authorName: user?.displayName || 'Exponential Editorial Team',
-        authorRole: role === 'admin' ? 'admin' : 'editor',
-        publishedDate: new Date().toISOString().slice(0, 10),
-        readTime: '4 min read',
-        imageUrl: HERO_POSTER_IMAGE,
-        featured: false,
-        status: 'draft' as ContentStatus,
-        isDeleted: false,
-      };
-      await setDoc(doc(db, 'articles', id), payload);
-      setNewArtTitle('');
-      setNewArtExcerpt('');
-      setNewArtBody('');
-      await loadAdminData();
-      setStatusMessage('Draft article created.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const toggleArticleStatus = async (article: InsightArticle) => {
-    const nextStatus: ContentStatus = article.status === 'published' ? 'draft' : 'published';
-    await updateDoc(doc(db, 'articles', article.id), { status: nextStatus });
-    await loadAdminData();
-    await refreshPublicContent();
+    await runCmsMutation(
+      async () => {
+        await createDraftArticle({
+          title: newArtTitle,
+          category: newArtCategory,
+          excerpt: newArtExcerpt,
+          body: newArtBody,
+          authorName: user?.displayName || 'Exponential Editorial Team',
+          authorRole: role,
+        });
+        setNewArtTitle('');
+        setNewArtExcerpt('');
+        setNewArtBody('');
+      },
+      'Draft article created.',
+      false
+    );
   };
 
   const handleCreateTeamMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanName = sanitizePlainText(newMemberName);
-    const cleanRole = sanitizePlainText(newMemberRole);
-    const cleanDivision = sanitizePlainText(newMemberDivision);
-    const cleanBio = sanitizePlainText(newMemberBio);
-    const cleanPhoto = newMemberPhotoUrl.trim();
-    if (cleanName.length < 2 || cleanRole.length < 2 || cleanBio.length < 10) {
-      setStatusMessage('Please enter a valid name, role, and bio (at least 10 characters).');
-      return;
-    }
-    if (cleanPhoto && !isSafeHttpOrLocalUrl(cleanPhoto)) {
-      setStatusMessage('Photo URL must be a safe https://, http://, or local / asset path.');
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const id = `team-${Date.now()}`;
-      const payload: Record<string, unknown> = {
-        name: cleanName.slice(0, 100),
-        role: cleanRole.slice(0, 120),
-        division: (cleanDivision || 'Exponential Media Africa').slice(0, 100),
-        bio: cleanBio.slice(0, 600),
-        isPlaceholder: false,
-        status: 'draft' as ContentStatus,
-        isDeleted: false,
-      };
-      if (cleanPhoto) {
-        payload.photoUrl = cleanPhoto.slice(0, 500);
-      }
-      await setDoc(doc(db, 'team_members', id), payload);
-      setNewMemberName('');
-      setNewMemberRole('');
-      setNewMemberBio('');
-      setNewMemberPhotoUrl('');
-      await loadAdminData();
-      setStatusMessage('Draft team member created. Click Publish to display publicly.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const toggleTeamMemberStatus = async (member: TeamMember) => {
-    const nextStatus: ContentStatus = member.status === 'published' ? 'draft' : 'published';
-    await updateDoc(doc(db, 'team_members', member.id), { status: nextStatus });
-    await loadAdminData();
-    await refreshPublicContent();
-  };
-
-  const softDeleteTeamMember = async (member: TeamMember) => {
-    await updateDoc(doc(db, 'team_members', member.id), { isDeleted: !member.isDeleted });
-    await loadAdminData();
-    await refreshPublicContent();
+    await runCmsMutation(
+      async () => {
+        await createDraftTeamMember({
+          name: newMemberName,
+          role: newMemberRole,
+          division: newMemberDivision,
+          bio: newMemberBio,
+          photoUrl: newMemberPhotoUrl,
+        });
+        setNewMemberName('');
+        setNewMemberRole('');
+        setNewMemberBio('');
+        setNewMemberPhotoUrl('');
+      },
+      'Draft team member created. Click Publish to display publicly.',
+      false
+    );
   };
 
   const handleCreateClientLogo = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanName = sanitizePlainText(newClientName);
-    const cleanSector = sanitizePlainText(newClientSector);
-    const cleanRegion = sanitizePlainText(newClientRegion);
-    const cleanLogoUrl = newClientLogoUrl.trim();
-    if (cleanName.length < 2 || cleanSector.length < 2) {
-      setStatusMessage('Please enter a valid company name and sector.');
-      return;
-    }
-    if (cleanLogoUrl && !isSafeHttpOrLocalUrl(cleanLogoUrl)) {
-      setStatusMessage('Logo URL must be a safe https://, http://, or local / asset path.');
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const id = `logo-${Date.now()}`;
-      const payload: Record<string, unknown> = {
-        name: cleanName.slice(0, 120),
-        sector: cleanSector.slice(0, 100),
-        isPlaceholder: false,
-        status: 'draft' as ContentStatus,
-        isDeleted: false,
-      };
-      if (cleanRegion) {
-        payload.region = cleanRegion.slice(0, 80);
-      }
-      if (cleanLogoUrl) {
-        payload.logoUrl = cleanLogoUrl.slice(0, 500);
-      }
-      await setDoc(doc(db, 'client_logos', id), payload);
-      setNewClientName('');
-      setNewClientSector('');
-      setNewClientRegion('');
-      setNewClientLogoUrl('');
-      await loadAdminData();
-      setStatusMessage('Draft worldwide client window created. Click Publish to display in sliding windows.');
-    } finally {
-      setBusy(false);
-    }
+    await runCmsMutation(
+      async () => {
+        await createDraftClientLogo({
+          name: newClientName,
+          sector: newClientSector,
+          region: newClientRegion,
+          logoUrl: newClientLogoUrl,
+        });
+        setNewClientName('');
+        setNewClientSector('');
+        setNewClientRegion('');
+        setNewClientLogoUrl('');
+      },
+      'Draft worldwide client window created. Click Publish to display in sliding windows.',
+      false
+    );
   };
 
-  const toggleClientLogoStatus = async (logo: ClientLogo) => {
-    const nextStatus: ContentStatus = logo.status === 'published' ? 'draft' : 'published';
-    await updateDoc(doc(db, 'client_logos', logo.id), { status: nextStatus });
-    await loadAdminData();
-    await refreshPublicContent();
+  const handleToggleStatus = async (
+    collectionName: CmsManagedCollection,
+    docId: string,
+    currentStatus: ContentStatus
+  ) => {
+    const nextStatus: ContentStatus = currentStatus === 'published' ? 'draft' : 'published';
+    await runCmsMutation(
+      () => updateCmsDocumentFields(collectionName, docId, { status: nextStatus }),
+      `Updated status to ${nextStatus}.`
+    );
   };
 
-  const softDeleteClientLogo = async (logo: ClientLogo) => {
-    await updateDoc(doc(db, 'client_logos', logo.id), { isDeleted: !logo.isDeleted });
-    await loadAdminData();
-    await refreshPublicContent();
+  const handleToggleArchive = async (
+    collectionName: CmsManagedCollection,
+    docId: string,
+    currentDeleted: boolean
+  ) => {
+    const nextDeleted = !currentDeleted;
+    await runCmsMutation(
+      () => updateCmsDocumentFields(collectionName, docId, { isDeleted: nextDeleted }),
+      nextDeleted ? 'Record archived.' : 'Record restored.'
+    );
   };
+
+  const toggleProjectStatus = (project: PortfolioProject) =>
+    void handleToggleStatus('portfolio_projects', project.id, project.status);
+  const softDeleteProject = (project: PortfolioProject) =>
+    void handleToggleArchive('portfolio_projects', project.id, project.isDeleted);
+  const toggleArticleStatus = (article: InsightArticle) =>
+    void handleToggleStatus('articles', article.id, article.status);
+  const toggleTeamMemberStatus = (member: TeamMember) =>
+    void handleToggleStatus('team_members', member.id, member.status);
+  const softDeleteTeamMember = (member: TeamMember) =>
+    void handleToggleArchive('team_members', member.id, member.isDeleted);
+  const toggleClientLogoStatus = (logo: ClientLogo) =>
+    void handleToggleStatus('client_logos', logo.id, logo.status);
+  const softDeleteClientLogo = (logo: ClientLogo) =>
+    void handleToggleArchive('client_logos', logo.id, logo.isDeleted);
 
   const updateInquiryStatus = async (
     inq: ProjectInquiry,
     nextStatus: ProjectInquiry['inquiryStatus']
   ) => {
-    if (!isAdmin) return;
-    if (!user) return;
-    setBusy(true);
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch(`/api/admin/inquiries/${encodeURIComponent(inq.id)}/status`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inquiryStatus: nextStatus }),
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.error || 'Inquiry status could not be updated.');
-      await loadAdminData();
-      setStatusMessage(`Inquiry ${inq.referenceCode} updated to ${nextStatus}.`);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Inquiry status could not be updated.');
-    } finally {
-      setBusy(false);
-    }
+    if (!isAdmin || !user) return;
+    await runCmsMutation(
+      () => updateInquiryStatusViaApi(user, inq.id, nextStatus),
+      `Inquiry ${inq.referenceCode} updated to ${nextStatus}.`,
+      false
+    );
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) return;
-    setBusy(true);
-    try {
-      await setDoc(doc(db, 'site_settings', 'main'), {
-        ...editableSettings,
-        updatedAt: new Date().toISOString(),
-      });
-      await refreshPublicContent();
-      setStatusMessage('Site settings updated and published.');
-    } finally {
-      setBusy(false);
-    }
+    await runCmsMutation(async () => {
+      const saved = await saveVerifiedSiteSettings(editableSettings);
+      setEditableSettings(saved);
+    }, 'Site settings updated and published.');
   };
 
   const handleAssignUserRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin || !newUserUid.trim() || !user) return;
     setBusy(true);
+    setStatusMessage(null);
     try {
-      const uid = sanitizePlainText(newUserUid);
-      const token = await user.getIdToken();
-      const response = await fetch('/api/admin/roles', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, role: newUserRole }),
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.error || 'Role provisioning failed.');
+      const provisionedUid = await provisionStaffRoleViaApi(user, newUserUid, newUserRole);
       setNewUserUid('');
       await loadAdminData();
-      setStatusMessage(`Provisioned ${newUserRole} role for ${uid}.`);
+      setStatusMessage(`Provisioned ${newUserRole} role for ${provisionedUid}.`);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Role provisioning failed.');
     } finally {
@@ -475,19 +339,15 @@ export function AdminPage() {
     }
   };
 
-  const handleRoleChange = async (target: AdminUserRecord, body: { role?: StaffRole; active?: boolean }) => {
+  const handleRoleChange = async (
+    target: AdminUserRecord,
+    body: { role?: StaffRole; active?: boolean }
+  ) => {
     if (!user) return;
     setBusy(true);
     setStatusMessage(null);
     try {
-      const token = await user.getIdToken();
-      const response = await fetch(`/api/admin/roles/${encodeURIComponent(target.id)}`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.error || 'Role update failed.');
+      await updateStaffRoleViaApi(user, target.id, body);
       await loadAdminData();
       setStatusMessage(`Updated access for ${target.email}.`);
     } catch (error) {
@@ -498,29 +358,29 @@ export function AdminPage() {
   };
 
   return (
-    <div className="min-h-[80vh] bg-[#0B0B0D] text-white">
+    <div className="min-h-[80vh] bg-[#9E0E15] text-white">
       <SeoHead
-        title="Staff CMS — Exponential Media Africa"
-        description="Protected administrative and editorial content management system."
+        title={t.seo.adminTitle}
+        description={t.seo.adminDescription}
         path="/admin"
         noIndex
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         {!authReady ? (
-          <div className="p-12 text-center text-sm text-neutral-400">
+          <div className="p-12 text-center text-sm text-white/80">
             Verifying authentication state...
           </div>
         ) : !isAuthorizedStaff ? (
-          <div className="max-w-md mx-auto p-8 bg-[#141418] border border-white/15 rounded-2xl text-center space-y-5">
-            <div className="w-12 h-12 mx-auto rounded-xl bg-[#ED2126]/15 border border-[#ED2126]/50 flex items-center justify-center text-[#ED2126]">
+          <div className="max-w-md mx-auto p-8 bg-[#850B11] border border-white/25 rounded-2xl text-center space-y-5">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-white/15 border border-white/30 flex items-center justify-center text-white">
               <Lock className="w-6 h-6" />
             </div>
             <div>
               <h1 className="text-2xl font-display font-bold text-white mb-2">
                 Staff CMS Access
               </h1>
-              <p className="text-sm text-neutral-400 leading-relaxed">
+              <p className="text-sm text-white/85 leading-relaxed">
                 Protected administrative and editorial workspace. Public registration is disabled; only authorised staff accounts may sign in.
               </p>
             </div>
@@ -534,7 +394,7 @@ export function AdminPage() {
             {mfaFactors.length > 0 ? (
               <div className="space-y-3 text-left">
                 <h2 className="text-sm font-semibold text-white">Complete two-step verification</h2>
-                <p className="text-xs leading-relaxed text-neutral-400">Choose an enrolled factor. Your code is verified by Firebase Authentication.</p>
+                <p className="text-xs leading-relaxed text-white/80">Choose an enrolled factor. Your code is verified by Firebase Authentication.</p>
                 <div className="grid gap-2">
                   {mfaFactors.map((factor) => (
                     <button
@@ -556,7 +416,7 @@ export function AdminPage() {
                       void completeMfaSignIn(mfaCode);
                     }}
                   >
-                    <label htmlFor="admin-mfa-code" className="block text-xs font-medium text-neutral-300">
+                    <label htmlFor="admin-mfa-code" className="block text-xs font-medium text-white/90">
                       {mfaVerificationSent ? 'Verification code' : 'Authenticator code'}
                     </label>
                     <input
@@ -568,7 +428,7 @@ export function AdminPage() {
                       required
                       value={mfaCode}
                       onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
-                      className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-center tracking-[0.3em] text-white"
+                      className="w-full rounded-lg border border-white/30 bg-white px-3 py-2 text-center tracking-[0.3em] text-[#1A0809]"
                     />
                     <button type="submit" className="w-full rounded-lg bg-[#ED2126] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#D1191E]">
                       Verify and continue
@@ -576,13 +436,13 @@ export function AdminPage() {
                   </form>
                 )}
                 <div id="admin-mfa-recaptcha" aria-hidden="true" />
-                <button type="button" onClick={cancelMfaChallenge} className="text-xs text-neutral-400 underline underline-offset-4">
+                <button type="button" onClick={cancelMfaChallenge} className="text-xs text-white/80 underline underline-offset-4">
                   Cancel sign-in
                 </button>
               </div>
             ) : user ? (
               <div className="space-y-3">
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-white/80">
                   Signed in as <span className="text-white">{user.email}</span> (No staff role assigned)
                 </p>
                 <button
@@ -597,7 +457,7 @@ export function AdminPage() {
               <button
                 type="button"
                 onClick={signInWithGoogle}
-                className="w-full py-3 px-5 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg transition-colors"
+                className="w-full py-3 px-5 text-sm font-semibold bg-[#ED1B24] hover:bg-[#D1141C] text-white rounded-lg transition-colors"
               >
                 Sign In with Authorised Google Account
               </button>
@@ -605,10 +465,9 @@ export function AdminPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Staff Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10">
               <div>
-                <div className="flex items-center gap-2 text-xs text-[#FF1A1F] font-semibold mb-1">
+                <div className="flex items-center gap-2 text-xs text-[#FFECEE] font-semibold mb-1">
                   <ShieldCheck className="w-4 h-4 text-[#ED2126]" />
                   <span>
                     Role: {role} · {user?.email}
@@ -634,7 +493,7 @@ export function AdminPage() {
                 <button
                   type="button"
                   onClick={signOut}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium border border-white/15 hover:bg-white/10 text-neutral-300 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium border border-white/15 hover:bg-white/10 text-white/90 rounded-lg transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>
@@ -651,8 +510,7 @@ export function AdminPage() {
               </div>
             )}
 
-            {/* RBAC-Gated Tabs */}
-            <div className="flex flex-wrap gap-1.5 p-1.5 bg-[#141418] border border-white/10 rounded-xl">
+            <div className="flex flex-wrap gap-1.5 p-1.5 bg-[#850B11] border border-white/10 rounded-xl">
               {(
                 [
                   { id: 'portfolio', label: 'Portfolio', icon: Eye, adminOnly: false },
@@ -678,7 +536,7 @@ export function AdminPage() {
                       className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-lg transition-colors ${
                         active
                           ? 'bg-[#ED2126] text-white font-semibold'
-                          : 'text-neutral-300 hover:text-white'
+                          : 'text-white/90 hover:text-white'
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" />
@@ -688,12 +546,11 @@ export function AdminPage() {
                 })}
             </div>
 
-            {/* Tab: Portfolio */}
             {activeTab === 'portfolio' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <form
                   onSubmit={handleCreateProject}
-                  className="lg:col-span-4 p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-4 h-fit"
+                  className="lg:col-span-4 p-6 bg-[#850B11] border border-white/10 rounded-2xl space-y-4 h-fit"
                 >
                   <h2 className="text-lg font-display font-bold flex items-center gap-2">
                     <Plus className="w-4 h-4 text-[#ED2126]" />
@@ -705,19 +562,19 @@ export function AdminPage() {
                     value={newProjTitle}
                     onChange={(e) => setNewProjTitle(e.target.value)}
                     placeholder="Project title"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <input
                     type="text"
                     value={newProjClient}
                     onChange={(e) => setNewProjClient(e.target.value)}
                     placeholder="Authorised client name"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <select
                     value={newProjCategory}
                     onChange={(e) => setNewProjCategory(e.target.value as PortfolioCategory)}
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   >
                     {PORTFOLIO_CATEGORIES.map((c) => (
                       <option key={c} value={c}>
@@ -728,12 +585,12 @@ export function AdminPage() {
                   <select
                     value={newProjDivision}
                     onChange={(e) => setNewProjDivision(e.target.value as DivisionId)}
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   >
-                    <option value="creative">Visual Design &amp; Brand Identity</option>
-                    <option value="estudios">Content Creation &amp; Production</option>
-                    <option value="marketing">Digital, Influencer &amp; Media Buy</option>
-                    <option value="emtc">Brand Activation &amp; Events</option>
+                    <option value="creative">Visual Design</option>
+                    <option value="estudios">Content Creation &amp; Marketing</option>
+                    <option value="marketing">Social Media, Influencer Marketing &amp; Media Buying</option>
+                    <option value="emtc">Brand Activation</option>
                   </select>
                   <textarea
                     rows={3}
@@ -741,12 +598,12 @@ export function AdminPage() {
                     value={newProjSummary}
                     onChange={(e) => setNewProjSummary(e.target.value)}
                     placeholder="Concise summary (min 10 chars)"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full py-2.5 text-xs font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg"
+                    className="w-full py-2.5 text-xs font-semibold bg-[#ED1B24] hover:bg-[#D1141C] text-white rounded-lg"
                   >
                     Create Draft Case Study
                   </button>
@@ -754,17 +611,17 @@ export function AdminPage() {
 
                 <div className="lg:col-span-8 space-y-3">
                   {cmsProjects.length === 0 ? (
-                    <div className="p-8 bg-[#141418] border border-white/10 rounded-2xl text-sm text-neutral-400">
+                    <div className="p-8 bg-[#850B11] border border-white/10 rounded-2xl text-sm text-white/80">
                       No portfolio entries in Firestore yet. Click &ldquo;Sync Default Content to Firestore&rdquo; above or create a new draft.
                     </div>
                   ) : (
                     cmsProjects.map((proj) => (
                       <div
                         key={proj.id}
-                        className="p-5 bg-[#141418] border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        className="p-5 bg-[#850B11] border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                       >
                         <div>
-                          <div className="text-xs text-neutral-400 mb-1">
+                          <div className="text-xs text-white/80 mb-1">
                             {proj.category} · {proj.status.toUpperCase()}
                             {proj.isDeleted ? ' · SOFT-DELETED' : ''}
                           </div>
@@ -796,12 +653,11 @@ export function AdminPage() {
               </div>
             )}
 
-            {/* Tab: Articles */}
             {activeTab === 'articles' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <form
                   onSubmit={handleCreateArticle}
-                  className="lg:col-span-4 p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-4 h-fit"
+                  className="lg:col-span-4 p-6 bg-[#850B11] border border-white/10 rounded-2xl space-y-4 h-fit"
                 >
                   <h2 className="text-lg font-display font-bold">New Insights Article</h2>
                   <input
@@ -810,12 +666,12 @@ export function AdminPage() {
                     value={newArtTitle}
                     onChange={(e) => setNewArtTitle(e.target.value)}
                     placeholder="Article headline"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <select
                     value={newArtCategory}
                     onChange={(e) => setNewArtCategory(e.target.value as ArticleCategory)}
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   >
                     <option value="Industry Articles">Industry Articles</option>
                     <option value="Marketing Insights">Marketing Insights</option>
@@ -829,7 +685,7 @@ export function AdminPage() {
                     value={newArtExcerpt}
                     onChange={(e) => setNewArtExcerpt(e.target.value)}
                     placeholder="Short excerpt"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <textarea
                     rows={5}
@@ -837,12 +693,12 @@ export function AdminPage() {
                     value={newArtBody}
                     onChange={(e) => setNewArtBody(e.target.value)}
                     placeholder="Article body (plain text paragraphs separated by blank lines)"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full py-2.5 text-xs font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg"
+                    className="w-full py-2.5 text-xs font-semibold bg-[#ED1B24] hover:bg-[#D1141C] text-white rounded-lg"
                   >
                     Save Draft Article
                   </button>
@@ -852,10 +708,10 @@ export function AdminPage() {
                   {cmsArticles.map((art) => (
                     <div
                       key={art.id}
-                      className="p-5 bg-[#141418] border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      className="p-5 bg-[#850B11] border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                     >
                       <div>
-                        <div className="text-xs text-neutral-400 mb-1">
+                        <div className="text-xs text-white/80 mb-1">
                           {art.category} · {art.publishedDate} · {art.status.toUpperCase()}
                         </div>
                         <div className="text-base font-display font-bold text-white">
@@ -875,12 +731,11 @@ export function AdminPage() {
               </div>
             )}
 
-            {/* Tab: Our Team */}
             {activeTab === 'team' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <form
                   onSubmit={handleCreateTeamMember}
-                  className="lg:col-span-4 p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-4 h-fit"
+                  className="lg:col-span-4 p-6 bg-[#850B11] border border-white/10 rounded-2xl space-y-4 h-fit"
                 >
                   <h2 className="text-lg font-display font-bold flex items-center gap-2">
                     <Plus className="w-4 h-4 text-[#ED2126]" />
@@ -892,7 +747,7 @@ export function AdminPage() {
                     value={newMemberName}
                     onChange={(e) => setNewMemberName(e.target.value)}
                     placeholder="Full name"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <input
                     type="text"
@@ -900,7 +755,7 @@ export function AdminPage() {
                     value={newMemberRole}
                     onChange={(e) => setNewMemberRole(e.target.value)}
                     placeholder="Role or title (e.g., Creative Director)"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <input
                     type="text"
@@ -908,14 +763,14 @@ export function AdminPage() {
                     value={newMemberDivision}
                     onChange={(e) => setNewMemberDivision(e.target.value)}
                     placeholder="Division / Practice area"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <input
                     type="text"
                     value={newMemberPhotoUrl}
                     onChange={(e) => setNewMemberPhotoUrl(e.target.value)}
                     placeholder="Portrait URL (optional https:// or /assets/...)"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <textarea
                     rows={3}
@@ -923,12 +778,12 @@ export function AdminPage() {
                     value={newMemberBio}
                     onChange={(e) => setNewMemberBio(e.target.value)}
                     placeholder="Short biography (min 10 chars)"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full py-2.5 text-xs font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg"
+                    className="w-full py-2.5 text-xs font-semibold bg-[#ED1B24] hover:bg-[#D1141C] text-white rounded-lg"
                   >
                     Create Draft Team Member
                   </button>
@@ -936,17 +791,17 @@ export function AdminPage() {
 
                 <div className="lg:col-span-8 space-y-3">
                   {cmsTeamMembers.length === 0 ? (
-                    <div className="p-8 bg-[#141418] border border-white/10 rounded-2xl text-sm text-neutral-400">
+                    <div className="p-8 bg-[#850B11] border border-white/10 rounded-2xl text-sm text-white/80">
                       No team profiles in Firestore yet. Click &ldquo;Sync Default Content to Firestore&rdquo; above or create a new team member.
                     </div>
                   ) : (
                     cmsTeamMembers.map((member) => (
                       <div
                         key={member.id}
-                        className="p-5 bg-[#141418] border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        className="p-5 bg-[#850B11] border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                       >
                         <div>
-                          <div className="text-xs text-neutral-400 mb-1">
+                          <div className="text-xs text-white/80 mb-1">
                             {member.role} · {member.division} · {member.status.toUpperCase()}
                             {member.isDeleted ? ' · ARCHIVED' : ''}
                           </div>
@@ -978,12 +833,11 @@ export function AdminPage() {
               </div>
             )}
 
-            {/* Tab: Worldwide Clients */}
             {activeTab === 'clients' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <form
                   onSubmit={handleCreateClientLogo}
-                  className="lg:col-span-4 p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-4 h-fit"
+                  className="lg:col-span-4 p-6 bg-[#850B11] border border-white/10 rounded-2xl space-y-4 h-fit"
                 >
                   <h2 className="text-lg font-display font-bold flex items-center gap-2">
                     <Plus className="w-4 h-4 text-[#ED2126]" />
@@ -995,7 +849,7 @@ export function AdminPage() {
                     value={newClientName}
                     onChange={(e) => setNewClientName(e.target.value)}
                     placeholder="Authorised company name"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <input
                     type="text"
@@ -1003,26 +857,26 @@ export function AdminPage() {
                     value={newClientSector}
                     onChange={(e) => setNewClientSector(e.target.value)}
                     placeholder="Industry / Sector (e.g., Fintech)"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <input
                     type="text"
                     value={newClientRegion}
                     onChange={(e) => setNewClientRegion(e.target.value)}
                     placeholder="Market / Region (e.g., Kenya & UK)"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <input
                     type="text"
                     value={newClientLogoUrl}
                     onChange={(e) => setNewClientLogoUrl(e.target.value)}
                     placeholder="Authorised logo URL (optional)"
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full py-2.5 text-xs font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg"
+                    className="w-full py-2.5 text-xs font-semibold bg-[#ED1B24] hover:bg-[#D1141C] text-white rounded-lg"
                   >
                     Create Draft Client Window
                   </button>
@@ -1030,17 +884,17 @@ export function AdminPage() {
 
                 <div className="lg:col-span-8 space-y-3">
                   {cmsClientLogos.length === 0 ? (
-                    <div className="p-8 bg-[#141418] border border-white/10 rounded-2xl text-sm text-neutral-400">
+                    <div className="p-8 bg-[#850B11] border border-white/10 rounded-2xl text-sm text-white/80">
                       No worldwide client windows in Firestore yet. Click &ldquo;Sync Default Content to Firestore&rdquo; above or add an authorised company.
                     </div>
                   ) : (
                     cmsClientLogos.map((logo) => (
                       <div
                         key={logo.id}
-                        className="p-5 bg-[#141418] border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        className="p-5 bg-[#850B11] border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                       >
                         <div>
-                          <div className="text-xs text-neutral-400 mb-1">
+                          <div className="text-xs text-white/80 mb-1">
                             {logo.sector}
                             {logo.region ? ` · ${logo.region}` : ''} · {logo.status.toUpperCase()}
                             {logo.isDeleted ? ' · ARCHIVED' : ''}
@@ -1073,31 +927,30 @@ export function AdminPage() {
               </div>
             )}
 
-            {/* Tab: Inquiries (ADMIN ONLY) */}
             {activeTab === 'inquiries' && isAdmin && (
               <div className="space-y-4">
                 <h2 className="text-xl font-display font-bold">
                   Confidential Project Inquiries ({inquiries.length})
                 </h2>
                 {inquiries.length === 0 ? (
-                  <div className="p-8 bg-[#141418] border border-white/10 rounded-2xl text-sm text-neutral-400">
+                  <div className="p-8 bg-[#850B11] border border-white/10 rounded-2xl text-sm text-white/80">
                     No project inquiries have been submitted yet.
                   </div>
                 ) : (
                   inquiries.map((inq) => (
                     <div
                       key={inq.id}
-                      className="p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-3"
+                      className="p-6 bg-[#850B11] border border-white/10 rounded-2xl space-y-3"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                          <span className="font-mono text-xs font-semibold text-[#FF1A1F] tabular-nums">
+                          <span className="font-display text-xs font-semibold text-[#FFECEE] tabular-nums">
                             {inq.referenceCode}
                           </span>
                           <h3 className="text-lg font-display font-bold text-white">
                             {inq.companyName} — {inq.fullName}
                           </h3>
-                          <div className="text-xs text-neutral-400">
+                          <div className="text-xs text-white/80">
                             {inq.businessEmail} · {inq.phone} · {inq.industry}
                           </div>
                         </div>
@@ -1111,7 +964,7 @@ export function AdminPage() {
                             )
                           }
                           aria-label={`Status for ${inq.referenceCode}`}
-                          className="px-3 py-1.5 text-xs bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                          className="px-3 py-1.5 text-xs bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                         >
                           <option value="new">New</option>
                           <option value="reviewing">Reviewing</option>
@@ -1119,8 +972,8 @@ export function AdminPage() {
                           <option value="archived">Archived</option>
                         </select>
                       </div>
-                      <p className="text-sm text-neutral-300">{inq.projectDescription}</p>
-                      <div className="text-xs text-neutral-400 pt-2 border-t border-white/10">
+                      <p className="text-sm text-white/90">{inq.projectDescription}</p>
+                      <div className="text-xs text-white/80 pt-2 border-t border-white/10">
                         Budget: {inq.estimatedBudget} · Timeline: {inq.projectTimeline} · Services:{' '}
                         {inq.requiredServices.join(', ')}
                       </div>
@@ -1130,41 +983,40 @@ export function AdminPage() {
               </div>
             )}
 
-            {/* Tab: Settings & Impact (ADMIN ONLY) */}
             {activeTab === 'settings' && isAdmin && (
               <form
                 onSubmit={handleSaveSettings}
-                className="p-6 sm:p-8 bg-[#141418] border border-white/10 rounded-2xl space-y-6 max-w-3xl"
+                className="p-6 sm:p-8 bg-[#850B11] border border-white/10 rounded-2xl space-y-6 max-w-3xl"
               >
                 <h2 className="text-xl font-display font-bold">
                   Verified Contact &amp; Impact Configuration
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-neutral-400 mb-1">Email</label>
+                    <label className="block text-xs text-white/80 mb-1">Email</label>
                     <input
                       type="email"
                       value={editableSettings.email}
                       onChange={(e) =>
                         setEditableSettings({ ...editableSettings, email: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                      className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-400 mb-1">Primary Phone</label>
+                    <label className="block text-xs text-white/80 mb-1">Primary Phone</label>
                     <input
                       type="text"
                       value={editableSettings.primaryPhone}
                       onChange={(e) =>
                         setEditableSettings({ ...editableSettings, primaryPhone: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                      className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">
+                  <label className="block text-xs text-white/80 mb-1">
                     Headquarters Address
                   </label>
                   <input
@@ -1176,44 +1028,43 @@ export function AdminPage() {
                         headquartersAddress: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 text-sm bg-[#0B0B0D] border border-white/15 rounded-lg text-white"
+                    className="w-full px-3 py-2 text-sm bg-[#9E0E15] border border-white/15 rounded-lg text-white"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={busy}
-                  className="px-5 py-2.5 text-xs font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg"
+                  className="px-5 py-2.5 text-xs font-semibold bg-[#ED1B24] hover:bg-[#D1141C] text-white rounded-lg"
                 >
                   Save Verified Settings
                 </button>
               </form>
             )}
 
-            {/* Tab: Users & Roles (ADMIN ONLY) */}
             {activeTab === 'users' && isAdmin && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div className="lg:col-span-5 p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-4 h-fit">
+                <div className="lg:col-span-5 p-6 bg-[#850B11] border border-white/10 rounded-2xl space-y-4 h-fit">
                   <div>
                     <h2 className="text-lg font-display font-bold">Provision staff access</h2>
-                    <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+                    <p className="text-xs text-white/80 mt-2 leading-relaxed">
                       Enter the Firebase UID of an existing enabled account with a verified email. The server retrieves account details and records the role change.
                     </p>
                   </div>
                   <form onSubmit={handleAssignUserRole} className="space-y-3">
-                    <label className="block text-xs text-neutral-300">
+                    <label className="block text-xs text-white/90">
                       Firebase user ID
-                      <input value={newUserUid} onChange={(event) => setNewUserUid(event.target.value)} required maxLength={128} className="mt-1 w-full px-3 py-2 bg-[#0B0B0D] border border-white/15 rounded-md" />
+                      <input value={newUserUid} onChange={(event) => setNewUserUid(event.target.value)} required maxLength={128} className="mt-1 w-full px-3 py-2 bg-[#9E0E15] border border-white/15 rounded-md" />
                     </label>
-                    <label className="block text-xs text-neutral-300">
+                    <label className="block text-xs text-white/90">
                       Role
-                      <select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value as StaffRole)} className="mt-1 w-full px-3 py-2 bg-[#0B0B0D] border border-white/15 rounded-md">
+                      <select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value as StaffRole)} className="mt-1 w-full px-3 py-2 bg-[#9E0E15] border border-white/15 rounded-md">
                         <option value="editor">Editor</option>
                         <option value="admin">Administrator</option>
                       </select>
                     </label>
                     <button type="submit" disabled={busy} className="px-4 py-2 text-xs font-semibold bg-[#ED2126] disabled:opacity-50 rounded-md">Provision role</button>
                   </form>
-                  <p className="text-[11px] text-neutral-500 leading-relaxed">
+                  <p className="text-[11px] text-white/75 leading-relaxed">
                     Initial administrator access must be established using the documented ADC bootstrap command. Administrators cannot modify their own access or remove the last active administrator.
                   </p>
                 </div>
@@ -1222,11 +1073,11 @@ export function AdminPage() {
                   {adminUsers.map((u) => (
                     <div
                       key={u.id}
-                      className="p-4 bg-[#141418] border border-white/10 rounded-xl flex items-center justify-between"
+                      className="p-4 bg-[#850B11] border border-white/10 rounded-xl flex items-center justify-between"
                     >
                       <div>
                         <div className="text-sm font-semibold text-white">{u.displayName}</div>
-                        <div className="text-xs text-neutral-400">
+                        <div className="text-xs text-white/80">
                           {u.email} · {u.role} · {u.active ? 'Active' : 'Inactive'}
                         </div>
                       </div>
@@ -1236,7 +1087,7 @@ export function AdminPage() {
                           value={u.role}
                           disabled={busy || u.id === user?.uid}
                           onChange={(event) => void handleRoleChange(u, { role: event.target.value as StaffRole })}
-                          className="px-2 py-1 text-xs bg-[#0B0B0D] border border-white/15 rounded"
+                          className="px-2 py-1 text-xs bg-[#9E0E15] border border-white/15 rounded"
                         >
                           <option value="editor">Editor</option>
                           <option value="admin">Administrator</option>
@@ -1256,19 +1107,18 @@ export function AdminPage() {
               </div>
             )}
 
-            {/* Tab: Audit Logs (ADMIN ONLY) */}
             {activeTab === 'audit' && isAdmin && (
               <div className="space-y-3">
                 <h2 className="text-xl font-display font-bold">Server-recorded administrative events</h2>
-                <p className="text-xs text-neutral-400">Role provisioning and inquiry status changes are recorded by trusted server transactions.</p>
+                <p className="text-xs text-white/80">Role provisioning and inquiry status changes are recorded by trusted server transactions.</p>
                 {auditLogs.length === 0 ? (
-                  <div className="p-8 bg-[#141418] border border-white/10 rounded-2xl text-sm text-neutral-400">
+                  <div className="p-8 bg-[#850B11] border border-white/10 rounded-2xl text-sm text-white/80">
                     No audit records recorded yet.
                   </div>
                 ) : (
                   <div className="overflow-x-auto border border-white/10 rounded-xl">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-[#141418] text-neutral-400 border-b border-white/10">
+                      <thead className="bg-[#850B11] text-white/80 border-b border-white/10">
                         <tr>
                           <th className="py-3 px-4">Actor</th>
                           <th className="py-3 px-4">Role</th>
@@ -1280,14 +1130,14 @@ export function AdminPage() {
                       </thead>
                       <tbody className="divide-y divide-white/10">
                         {auditLogs.map((log) => (
-                          <tr key={log.id} className="bg-[#0B0B0D]">
+                          <tr key={log.id} className="bg-[#9E0E15]">
                             <td className="py-3 px-4 text-white">{log.actorEmail}</td>
-                            <td className="py-3 px-4 font-mono">{log.actorRole}</td>
-                            <td className="py-3 px-4 font-mono text-[#FF1A1F]">{log.action}</td>
-                            <td className="py-3 px-4 font-mono text-neutral-400">
+                            <td className="py-3 px-4 font-display font-semibold">{log.actorRole}</td>
+                            <td className="py-3 px-4 font-display font-semibold text-[#FFECEE]">{log.action}</td>
+                            <td className="py-3 px-4 font-display text-white/80">
                               {log.targetCollection}/{log.targetId}
                             </td>
-                            <td className="py-3 px-4 text-neutral-300">{log.summary}</td>
+                            <td className="py-3 px-4 text-white/90">{log.summary}</td>
                             <td className="py-3 px-4">{log.outcome || 'Recorded'}</td>
                           </tr>
                         ))}
@@ -1298,20 +1148,19 @@ export function AdminPage() {
               </div>
             )}
 
-            {/* Tab: Future Modules Architecture */}
             {activeTab === 'architecture' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-3">
-                  <div className="text-xs font-mono font-semibold text-[#FF1A1F]">PHASE 2 CONTRACT READY</div>
+                <div className="p-6 bg-[#850B11] border border-white/10 rounded-2xl space-y-3">
+                  <div className="text-xs font-display font-semibold tracking-wide text-[#FFECEE]">PHASE 2 CONTRACT READY</div>
                   <h2 className="text-xl font-display font-bold">Influencer Directory</h2>
-                  <p className="text-sm text-neutral-300 leading-relaxed">
+                  <p className="text-sm text-white/90 leading-relaxed">
                     TypeScript interfaces (`InfluencerProfileContract`) and security boundaries are staged for creator profiles, social platforms, content categories, audience demographics, verified engagement metrics, and collaboration inquiries.
                   </p>
                 </div>
-                <div className="p-6 bg-[#141418] border border-white/10 rounded-2xl space-y-3">
-                  <div className="text-xs font-mono font-semibold text-[#FF1A1F]">PHASE 2 CONTRACT READY</div>
+                <div className="p-6 bg-[#850B11] border border-white/10 rounded-2xl space-y-3">
+                  <div className="text-xs font-display font-semibold tracking-wide text-[#FFECEE]">PHASE 2 CONTRACT READY</div>
                   <h2 className="text-xl font-display font-bold">Client Portal</h2>
-                  <p className="text-sm text-neutral-300 leading-relaxed">
+                  <p className="text-sm text-white/90 leading-relaxed">
                     Architecture (`ClientPortalWorkspaceContract`) is prepared for scoped client authentication, live project tracking, campaign reporting, deliverable sign-off, and confidential document sharing.
                   </p>
                 </div>
