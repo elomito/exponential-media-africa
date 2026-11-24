@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ExternalLink, Globe, Loader2, Search } from 'lucide-react';
+import { ExternalLink, Loader2, Search } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { isSafeExternalHttpUrl, sanitizePlainText } from '../lib/validation';
 
 interface GroundedSource {
   title: string;
@@ -11,17 +13,18 @@ interface ResearchResult {
   sources: GroundedSource[];
 }
 
-const SUGGESTED_TOPICS = [
-  'Digital marketing and social commerce trends in Kenya 2026',
-  'Corporate podcasting and video storytelling growth in East Africa',
-  'Experiential brand activation strategies in Nairobi retail',
-];
+interface SearchGroundedBriefProps {
+  surface?: 'red' | 'light';
+}
 
-export function SearchGroundedBrief() {
+export function SearchGroundedBrief({ surface = 'red' }: SearchGroundedBriefProps) {
+  const { t } = useLanguage();
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ResearchResult | null>(null);
+
+  const isLight = surface === 'light';
 
   const runResearch = async (queryText: string) => {
     const trimmed = queryText.trim();
@@ -43,9 +46,23 @@ export function SearchGroundedBrief() {
         setError(json.error || 'Unable to complete live Search-grounded research.');
         return;
       }
+      const safeSources = Array.isArray(json.sources)
+        ? json.sources
+            .filter(
+              (src: unknown): src is GroundedSource =>
+                Boolean(src) &&
+                typeof src === 'object' &&
+                typeof (src as GroundedSource).uri === 'string' &&
+                isSafeExternalHttpUrl((src as GroundedSource).uri)
+            )
+            .map((src: GroundedSource) => ({
+              uri: src.uri.trim(),
+              title: sanitizePlainText(src.title || '') || src.uri.trim(),
+            }))
+        : [];
       setResult({
-        answer: json.answer || '',
-        sources: Array.isArray(json.sources) ? json.sources : [],
+        answer: typeof json.answer === 'string' ? json.answer : '',
+        sources: safeSources,
       });
     } catch {
       setError('Network error while running live Search research. Please try again.');
@@ -60,21 +77,22 @@ export function SearchGroundedBrief() {
   };
 
   return (
-    <section
-      aria-label="Live Search-Grounded Market Research"
-      className="p-6 sm:p-8 bg-[#141418] border border-white/15 rounded-2xl space-y-6"
-    >
+    <div aria-label={t.research.heading} className="py-4 space-y-6">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="max-w-2xl space-y-2">
-          <div className="inline-flex items-center gap-2 text-xs font-bold tracking-wide text-[#FF1A1F]">
-            <Globe className="w-4 h-4 text-[#FF1A1F]" aria-hidden="true" />
-            <span>Live Industry Intelligence · Grounded with Google Search</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight">
-            Research current East African media &amp; marketing trends
+        <div className="max-w-3xl space-y-3">
+          <h2
+            className={`text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase [text-wrap:balance] ${
+              isLight ? 'text-[#B81118]' : 'text-white'
+            }`}
+          >
+            {t.research.heading}
           </h2>
-          <p className="text-sm text-neutral-300 leading-relaxed">
-            Query live industry context across Kenyan marketing, production, and creative education with verifiable web source citations.
+          <p
+            className={`text-base sm:text-lg leading-relaxed ${
+              isLight ? 'text-[#4A2527]' : 'text-white/95'
+            }`}
+          >
+            {t.research.subtitle}
           </p>
         </div>
       </div>
@@ -82,41 +100,51 @@ export function SearchGroundedBrief() {
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search
-            className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2"
+            className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${
+              isLight ? 'text-[#B81118]' : 'text-[#5C3A3C]'
+            }`}
             aria-hidden="true"
           />
           <label htmlFor="search-grounded-query" className="sr-only">
-            Market or creative industry topic
+            {t.research.heading}
           </label>
           <input
             id="search-grounded-query"
             type="text"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            placeholder="e.g., Influencer marketing regulation and creator rates in Kenya..."
+            placeholder={t.research.placeholder}
             maxLength={300}
-            className="w-full pl-10 pr-4 py-3 text-sm bg-[#0B0B0D] border border-white/15 rounded-xl text-white placeholder:text-neutral-500 focus:border-[#ED2126] focus:outline-none"
+            className={`w-full pl-10 pr-4 py-3 text-sm bg-white rounded-lg text-[#1A0809] placeholder:text-[#5C3A3C]/70 focus:outline-none ${
+              isLight ? 'border border-[#B81118]/30 focus:border-[#ED1B24]' : 'border border-white'
+            }`}
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] disabled:opacity-60 text-white rounded-xl transition-colors whitespace-nowrap shrink-0"
+          className={`inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold disabled:opacity-60 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+            isLight
+              ? 'bg-[#ED1B24] hover:bg-[#B81118] text-white'
+              : 'bg-white hover:bg-white/90 text-[#B81118]'
+          }`}
         >
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-              <span>Researching...</span>
+              <span>{t.research.researching}</span>
             </>
           ) : (
-            <span>Research Topic</span>
+            <span>{t.research.researchBtn}</span>
           )}
         </button>
       </form>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-neutral-400">Try:</span>
-        {SUGGESTED_TOPICS.map((suggestion) => (
+      <div className="flex flex-wrap items-center gap-3">
+        <span className={`text-sm font-semibold ${isLight ? 'text-[#B81118]' : 'text-white/80'}`}>
+          {t.research.tryLabel}
+        </span>
+        {t.research.topics.map((suggestion) => (
           <button
             key={suggestion}
             type="button"
@@ -125,7 +153,9 @@ export function SearchGroundedBrief() {
               setTopic(suggestion);
               runResearch(suggestion);
             }}
-            className="text-xs px-3 py-1.5 rounded-lg bg-[#0B0B0D] border border-white/10 hover:border-[#ED2126]/60 text-neutral-300 hover:text-white transition-colors text-left"
+            className={`text-sm transition-colors text-left ${
+              isLight ? 'text-[#4A2527] hover:text-[#B81118]' : 'text-white/90 hover:text-white'
+            }`}
           >
             {suggestion}
           </button>
@@ -135,31 +165,41 @@ export function SearchGroundedBrief() {
       {error && (
         <div
           role="alert"
-          className="p-4 rounded-xl bg-rose-950/50 border border-rose-500/40 text-xs text-rose-200"
+          className={`p-4 rounded-lg text-sm font-semibold ${
+            isLight ? 'bg-[#B81118]/10 text-[#9E0E15]' : 'bg-white text-[#9E0E15]'
+          }`}
         >
           {error}
         </div>
       )}
 
       {result && (
-        <div className="p-6 rounded-xl bg-[#0B0B0D] border border-white/10 space-y-5">
-          <div className="space-y-3 text-sm text-neutral-200 leading-relaxed whitespace-pre-line">
+        <div className="pt-4 space-y-5">
+          <div
+            className={`space-y-3 text-base sm:text-lg leading-relaxed whitespace-pre-line ${
+              isLight ? 'text-[#2A1214]' : 'text-white/95'
+            }`}
+          >
             {result.answer}
           </div>
 
           {result.sources.length > 0 && (
-            <div className="pt-4 border-t border-white/10 space-y-2.5">
-              <div className="text-xs font-semibold text-neutral-400">
-                Verified Google Search Sources
+            <div className="pt-2 space-y-2.5">
+              <div
+                className={`text-sm font-semibold ${isLight ? 'text-[#B81118]' : 'text-white/85'}`}
+              >
+                {t.research.sourcesLabel}
               </div>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {result.sources.map((src) => (
                   <li key={src.uri}>
                     <a
                       href={src.uri}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#141418] border border-white/10 hover:border-[#ED2126]/60 text-xs font-semibold text-[#FF1A1F] hover:text-white transition-colors"
+                      className={`flex items-center justify-between gap-2 py-1.5 text-sm font-semibold hover:opacity-80 transition-opacity ${
+                        isLight ? 'text-[#B81118]' : 'text-white'
+                      }`}
                     >
                       <span className="truncate">{src.title || src.uri}</span>
                       <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
@@ -171,6 +211,6 @@ export function SearchGroundedBrief() {
           )}
         </div>
       )}
-    </section>
+    </div>
   );
 }
