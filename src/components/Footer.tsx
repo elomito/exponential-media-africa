@@ -1,6 +1,11 @@
-import { ArrowUpRight, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { Mail, MapPin, Phone } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
+import { Reveal } from './ScrollReveal';
 import { useCms } from '../context/CmsContext';
-import { DIVISIONS, VERIFIED_CONTACT } from '../data/seedData';
+import { useLanguage } from '../context/LanguageContext';
+import { VERIFIED_CONTACT } from '../data/seedData';
+import { CORE_SERVICE_ROUTES } from '../lib/portfolio';
+import { sanitizeMailtoHref, sanitizeTelHref } from '../lib/validation';
 
 interface FooterProps {
   onNavigate: (path: string) => void;
@@ -8,54 +13,46 @@ interface FooterProps {
 
 export function Footer({ onNavigate }: FooterProps) {
   const { settings } = useCms();
-
-  const configuredSocials = (['instagram', 'linkedin', 'youtube', 'x'] as const)
-    .map((network) => ({ network, url: settings.socialLinks[network]?.trim() || '' }))
-    .filter((entry) => Boolean(entry.url));
+  const { language, t, localizeServiceBySlug } = useLanguage();
+  const localizedTagline =
+    language === 'sw' ? 'Suluhu Bunifu kwa Ukuaji Mkubwa.' : settings.tagline;
 
   return (
-    <footer className="bg-[#08080A] text-neutral-300 border-t border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 pb-16 border-b border-white/10">
-          {/* Brand & Verified Contact */}
-          <div className="lg:col-span-4 space-y-5">
+    <footer className="bg-[#9E0E15] text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24 md:pt-20 md:pb-24">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 pb-14">
+          <Reveal variant="slide-left" className="lg:col-span-4 space-y-5">
             <a
               href="/"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigate('/');
               }}
-              className="inline-flex items-center gap-2.5 text-white font-display font-bold text-xl tracking-tight"
+              aria-label="Exponential Marketing Agency"
+              className="inline-flex items-center focus-visible:outline-2 focus-visible:outline-white"
             >
-              <img
-                src="/assets/profile/brand/exp-mark.png"
-                alt=""
-                width={28}
-                height={28}
-                className="w-7 h-7 rounded object-contain shrink-0 bg-white p-0.5"
-              />
-              <span>EXPONENTIAL MEDIA AFRICA</span>
+              <BrandLogo variant="footer" />
             </a>
-            <p className="text-sm leading-relaxed text-neutral-400 max-w-sm">
-              {settings.tagline} Helping brands stand out in the digital age across Kenya, Uganda, Rwanda, Democratic Republic of Congo, and Zambia.
+            <p className="text-base sm:text-lg leading-relaxed text-white/90 max-w-sm">
+              {localizedTagline} {t.footer.bioSuffix}
             </p>
-            <div className="space-y-2.5 text-sm">
-              <div className="flex items-start gap-2.5 text-neutral-300">
-                <MapPin className="w-4 h-4 text-[#ED2126] shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="space-y-2.5 text-base">
+              <div className="flex items-start gap-2.5 text-white/90">
+                <MapPin className="w-4 h-4 text-white shrink-0 mt-1" aria-hidden="true" />
                 <span>{settings.headquartersAddress}</span>
               </div>
-              <div className="flex items-center gap-2.5 text-neutral-300">
-                <Mail className="w-4 h-4 text-[#ED2126] shrink-0" aria-hidden="true" />
-                <a href={`mailto:${settings.email}`} className="hover:text-white transition-colors">
+              <div className="flex items-center gap-2.5 text-white/90">
+                <Mail className="w-4 h-4 text-white shrink-0" aria-hidden="true" />
+                <a href={sanitizeMailtoHref(settings.email)} className="hover:opacity-80 transition-opacity">
                   {settings.email}
                 </a>
               </div>
-              <div className="flex items-center gap-2.5 text-neutral-300">
-                <Phone className="w-4 h-4 text-[#ED2126] shrink-0" aria-hidden="true" />
+              <div className="flex items-center gap-2.5 text-white/90">
+                <Phone className="w-4 h-4 text-white shrink-0" aria-hidden="true" />
                 <span className="flex flex-wrap gap-x-2">
                   <a
-                    href={`tel:${settings.primaryPhone.replace(/\s+/g, '')}`}
-                    className="hover:text-white transition-colors"
+                    href={sanitizeTelHref(settings.primaryPhone)}
+                    className="hover:opacity-80 transition-opacity"
                   >
                     {settings.primaryPhone}
                   </a>
@@ -63,8 +60,8 @@ export function Footer({ onNavigate }: FooterProps) {
                     <>
                       <span aria-hidden="true">·</span>
                       <a
-                        href={`tel:${settings.secondaryPhone.replace(/\s+/g, '')}`}
-                        className="hover:text-white transition-colors"
+                        href={sanitizeTelHref(settings.secondaryPhone)}
+                        className="hover:opacity-80 transition-opacity"
                       >
                         {settings.secondaryPhone}
                       </a>
@@ -72,53 +69,43 @@ export function Footer({ onNavigate }: FooterProps) {
                   )}
                 </span>
               </div>
-              <div className="pt-1">
-                <a
-                  href={VERIFIED_CONTACT.whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#141418] border border-white/15 hover:border-[#ED2126] text-xs font-semibold text-white transition-colors"
-                >
-                  <MessageCircle className="w-4 h-4 text-[#ED2126]" aria-hidden="true" />
-                  <span>Chat on WhatsApp</span>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-[#FF1A1F]" aria-hidden="true" />
-                </a>
-              </div>
             </div>
-          </div>
+          </Reveal>
 
-          {/* Core Capabilities */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-sm font-semibold text-white tracking-tight">Capabilities</h3>
-            <ul className="space-y-2.5 text-sm">
-              {DIVISIONS.map((div) => (
-                <li key={div.id}>
+          <Reveal variant="slide-down" delayMs={70} className="lg:col-span-3 space-y-4">
+            <h3 className="text-base font-bold uppercase text-white tracking-tight">
+              {t.footer.servicesTitle}
+            </h3>
+            <ul className="space-y-2.5 text-base">
+              {CORE_SERVICE_ROUTES.map((service) => (
+                <li key={service.slug}>
                   <a
-                    href={`/ecosystem#${div.id}`}
+                    href={`/services/${service.slug}`}
                     onClick={(e) => {
                       e.preventDefault();
-                      onNavigate(`/ecosystem#${div.id}`);
+                      onNavigate(`/services/${service.slug}`);
                     }}
-                    className="text-neutral-400 hover:text-white transition-colors"
+                    className="text-white/85 hover:text-white transition-colors"
                   >
-                    {div.name}
+                    {localizeServiceBySlug(service.slug, service.title)}
                   </a>
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
-          {/* Navigation */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-sm font-semibold text-white tracking-tight">Explore</h3>
-            <ul className="space-y-2.5 text-sm">
+          <Reveal variant="slide-down" delayMs={120} className="lg:col-span-2 space-y-4">
+            <h3 className="text-base font-bold uppercase text-white tracking-tight">
+              {t.footer.exploreTitle}
+            </h3>
+            <ul className="space-y-2.5 text-base">
               {[
-                { label: 'About Us', path: '/about' },
-                { label: 'Integrated Model', path: '/ecosystem' },
-                { label: 'Services', path: '/services' },
-                { label: 'Our Work', path: '/work' },
-                { label: 'Insights', path: '/insights' },
-                { label: 'Contact Us', path: '/contact' },
+                { label: t.footer.exploreLinks.about, path: '/about' },
+                { label: t.footer.exploreLinks.services, path: '/services' },
+                { label: t.footer.exploreLinks.work, path: '/work' },
+                { label: t.footer.exploreLinks.insights, path: '/insights' },
+                { label: t.footer.exploreLinks.faq, path: '/faq' },
+                { label: t.footer.exploreLinks.contact, path: '/contact' },
               ].map((link) => (
                 <li key={link.path}>
                   <a
@@ -127,82 +114,68 @@ export function Footer({ onNavigate }: FooterProps) {
                       e.preventDefault();
                       onNavigate(link.path);
                     }}
-                    className="text-neutral-400 hover:text-white transition-colors"
+                    className="text-white/85 hover:text-white transition-colors"
                   >
                     {link.label}
                   </a>
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
-          {/* Newsletter Subscription (Kenya DPA 2019 Consent-Gated) */}
-          <div className="lg:col-span-4 space-y-4">
-            <h3 className="text-sm font-semibold text-white tracking-tight">
-              Industry Dispatches
+          <Reveal variant="slide-left" delayMs={150} className="lg:col-span-3 space-y-4">
+            <h3 className="text-base font-bold uppercase text-white tracking-tight">
+              {t.footer.focusTitle}
             </h3>
-            <p className="text-sm text-neutral-400 leading-relaxed">
-              Mailing list sign-up is temporarily paused while secure confirmation and unsubscribe handling are completed.
+            <p className="text-base sm:text-lg text-white/85 leading-relaxed">
+              {t.footer.focusBody}
             </p>
-            <p className="text-xs text-neutral-400">
-              Need to update a mailing-list preference? Email{' '}
-              <a href={`mailto:${VERIFIED_CONTACT.email}`} className="underline underline-offset-4">{VERIFIED_CONTACT.email}</a>.
+            <p className="text-base text-white/85">
+              {t.footer.directBriefDesk}{' '}
+              <a
+                href={sanitizeMailtoHref(VERIFIED_CONTACT.email)}
+                className="font-semibold text-white hover:opacity-80"
+              >
+                {VERIFIED_CONTACT.email}
+              </a>
             </p>
-          </div>
+          </Reveal>
         </div>
 
-        {/* Bottom Legal & Verified Social Row */}
-        <div className="pt-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-neutral-400">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <span>© {new Date().getFullYear()} {settings.companyName}. All rights reserved.</span>
-            <a
-              href="/privacy-policy"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate('/privacy-policy');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Privacy Policy
-            </a>
-            <a
-              href="/terms"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate('/terms');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Terms &amp; Conditions
-            </a>
-            <a
-              href="/admin"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate('/admin');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Staff Login
-            </a>
-          </div>
-
-          {configuredSocials.length > 0 && (
-            <div className="flex items-center gap-5">
-              {configuredSocials.map(({ network, url }) => (
-                <a
-                  key={network}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 capitalize text-neutral-300 hover:text-white transition-colors"
-                >
-                  <span>{network === 'x' ? 'X' : network}</span>
-                  <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
-                </a>
-              ))}
-            </div>
-          )}
+        <div className="pt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-white/85">
+          <span>
+            © {new Date().getFullYear()} {settings.companyName}. {t.footer.rightsReserved}
+          </span>
+          <a
+            href="/privacy-policy"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/privacy-policy');
+            }}
+            className="hover:text-white transition-colors"
+          >
+            {t.footer.privacy}
+          </a>
+          <a
+            href="/terms"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/terms');
+            }}
+            className="hover:text-white transition-colors"
+          >
+            {t.footer.terms}
+          </a>
+          <a
+            href="/admin"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/admin');
+            }}
+            className="hover:text-white transition-colors"
+          >
+            {t.footer.staffLogin}
+          </a>
         </div>
       </div>
     </footer>

@@ -2,55 +2,37 @@ import React, {
   Component,
   type ErrorInfo,
   type ReactNode,
-  Suspense,
-  lazy,
   useCallback,
   useEffect,
   useState,
 } from 'react';
+import { CursorDot } from './components/CursorDot';
+import { FloatingActionDock } from './components/FloatingActionDock';
 import { Footer } from './components/Footer';
 import { Navbar } from './components/Navbar';
+import { preloadAssetImages } from './components/OptimizedImage';
 import { ProjectInquiryModal } from './components/ProjectInquiryModal';
 import { AuthProvider } from './context/AuthContext';
 import { CmsProvider } from './context/CmsContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { EXECUTIVE_DIRECTOR_PORTRAIT, PAGE_HERO_IMAGES } from './data/pageHeroes';
+import { ORDERED_SERVICE_DETAILS } from './data/serviceDetails';
+import { normalizeRoutePath } from './lib/routing';
+import { AboutPage } from './pages/AboutPage';
+import { AdminPage } from './pages/AdminPage';
+import { ArticlePage } from './pages/ArticlePage';
+import { CaseStudyPage } from './pages/CaseStudyPage';
+import { ContactPage } from './pages/ContactPage';
+import { EcosystemPage } from './pages/EcosystemPage';
+import { FaqPage } from './pages/FaqPage';
 import { HomePage } from './pages/HomePage';
-
-const AboutPage = lazy(() =>
-  import('./pages/AboutPage').then((m) => ({ default: m.AboutPage }))
-);
-const AdminPage = lazy(() =>
-  import('./pages/AdminPage').then((m) => ({ default: m.AdminPage }))
-);
-const ArticlePage = lazy(() =>
-  import('./pages/ArticlePage').then((m) => ({ default: m.ArticlePage }))
-);
-const CaseStudyPage = lazy(() =>
-  import('./pages/CaseStudyPage').then((m) => ({ default: m.CaseStudyPage }))
-);
-const ContactPage = lazy(() =>
-  import('./pages/ContactPage').then((m) => ({ default: m.ContactPage }))
-);
-const EcosystemPage = lazy(() =>
-  import('./pages/EcosystemPage').then((m) => ({ default: m.EcosystemPage }))
-);
-const InsightsPage = lazy(() =>
-  import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage }))
-);
-const LegalPage = lazy(() =>
-  import('./pages/LegalPage').then((m) => ({ default: m.LegalPage }))
-);
-const NotFoundPage = lazy(() =>
-  import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage }))
-);
-const ServicesPage = lazy(() =>
-  import('./pages/ServicesPage').then((m) => ({ default: m.ServicesPage }))
-);
-const TeamPage = lazy(() =>
-  import('./pages/TeamPage').then((m) => ({ default: m.TeamPage }))
-);
-const WorkPage = lazy(() =>
-  import('./pages/WorkPage').then((m) => ({ default: m.WorkPage }))
-);
+import { InsightsPage } from './pages/InsightsPage';
+import { LegalPage } from './pages/LegalPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { ServiceDetailPage } from './pages/ServiceDetailPage';
+import { ServicesPage } from './pages/ServicesPage';
+import { TeamPage } from './pages/TeamPage';
+import { WorkPage } from './pages/WorkPage';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -70,12 +52,12 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#0B0B0D] text-white flex items-center justify-center px-4">
-          <div className="max-w-lg w-full p-8 bg-[#141418] border border-white/15 border-t-4 border-t-[#ED2126] rounded-2xl space-y-4 text-center">
-            <h1 className="text-2xl font-display font-bold">Something went wrong</h1>
-            <p className="text-sm text-neutral-300 leading-relaxed">
+        <div className="min-h-screen bg-[#B81118] text-white flex items-center justify-center px-4">
+          <div className="max-w-lg w-full py-8 space-y-5 text-center">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold">Something went wrong</h1>
+            <p className="text-sm text-white/90 leading-relaxed">
               An unexpected display issue occurred. You can reload the page or contact us directly at{' '}
-              <a href="mailto:info@exponentialmedia.africa" className="text-[#FF1A1F] underline font-semibold">
+              <a href="mailto:info@exponentialmedia.africa" className="text-white font-semibold hover:opacity-80">
                 info@exponentialmedia.africa
               </a>{' '}
               or +254 728 231 221.
@@ -83,7 +65,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
             <button
               type="button"
               onClick={() => window.location.assign('/')}
-              className="px-5 py-2.5 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg transition-colors"
+              className="px-5 py-2.5 text-sm font-semibold bg-white hover:bg-white/90 text-[#9E0E15] rounded-lg transition-colors"
             >
               Return Home
             </button>
@@ -117,11 +99,17 @@ function RouterShell() {
         }
       }, 60);
     } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
   }, []);
 
   useEffect(() => {
+    const preloadTimer = window.setTimeout(() => {
+      preloadAssetImages([...Object.values(PAGE_HERO_IMAGES), EXECUTIVE_DIRECTOR_PORTRAIT]);
+    }, 60);
+    const servicePreloadTimer = window.setTimeout(() => {
+      preloadAssetImages(ORDERED_SERVICE_DETAILS.map((s) => s.heroImageUrl));
+    }, 450);
     const onPopState = () => {
       setCurrentPath(window.location.pathname || '/');
     };
@@ -131,6 +119,8 @@ function RouterShell() {
     window.addEventListener('popstate', onPopState);
     window.addEventListener('gmp-quota-exceeded', onGmpQuotaExceeded);
     return () => {
+      window.clearTimeout(preloadTimer);
+      window.clearTimeout(servicePreloadTimer);
       window.removeEventListener('popstate', onPopState);
       window.removeEventListener('gmp-quota-exceeded', onGmpQuotaExceeded);
     };
@@ -141,10 +131,7 @@ function RouterShell() {
     setInquiryModalOpen(true);
   };
 
-  const normalizedPath =
-    currentPath.length > 1 && currentPath.endsWith('/')
-      ? currentPath.slice(0, -1)
-      : currentPath;
+  const normalizedPath = normalizeRoutePath(currentPath);
 
   const renderPage = () => {
     if (normalizedPath === '/' || normalizedPath === '') {
@@ -157,7 +144,19 @@ function RouterShell() {
       return <EcosystemPage onNavigate={navigate} onOpenInquiry={openInquiry} />;
     }
     if (normalizedPath === '/services') {
-      return <ServicesPage onOpenInquiry={openInquiry} />;
+      return <ServicesPage onNavigate={navigate} onOpenInquiry={openInquiry} />;
+    }
+    if (normalizedPath.startsWith('/services/')) {
+      const slug = normalizedPath.replace('/services/', '').replace(/\/$/, '');
+      if (slug) {
+        return (
+          <ServiceDetailPage
+            slug={slug}
+            onNavigate={navigate}
+            onOpenInquiry={openInquiry}
+          />
+        );
+      }
     }
     if (normalizedPath === '/work') {
       return <WorkPage onNavigate={navigate} onOpenInquiry={() => openInquiry()} />;
@@ -183,6 +182,9 @@ function RouterShell() {
         return <ArticlePage slug={slug} onNavigate={navigate} />;
       }
     }
+    if (normalizedPath === '/faq') {
+      return <FaqPage onNavigate={navigate} onOpenInquiry={() => openInquiry()} />;
+    }
     if (normalizedPath === '/team') {
       return <TeamPage onNavigate={navigate} onOpenInquiry={() => openInquiry()} />;
     }
@@ -190,10 +192,10 @@ function RouterShell() {
       return <ContactPage onNavigate={navigate} />;
     }
     if (normalizedPath === '/privacy-policy') {
-      return <LegalPage mode="privacy" />;
+      return <LegalPage mode="privacy" onNavigate={navigate} />;
     }
     if (normalizedPath === '/terms') {
-      return <LegalPage mode="terms" />;
+      return <LegalPage mode="terms" onNavigate={navigate} />;
     }
     if (normalizedPath === '/admin') {
       return <AdminPage />;
@@ -209,10 +211,10 @@ function RouterShell() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B0B0D] text-[#F4F4F2]">
+    <div className="min-h-screen flex flex-col bg-[#B81118] text-white overflow-x-clip">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 px-4 py-2 bg-[#ED2126] text-white font-semibold text-xs rounded-lg"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 px-4 py-2 bg-white text-[#9E0E15] font-semibold text-xs rounded-lg"
       >
         Skip to main content
       </a>
@@ -240,19 +242,16 @@ function RouterShell() {
         onOpenInquiry={openInquiry}
       />
 
-      <main id="main-content" className="flex-1">
-        <Suspense
-          fallback={
-            <div className="min-h-[60vh] flex items-center justify-center text-sm text-neutral-400">
-              Loading page...
-            </div>
-          }
-        >
+      <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+        <div key={normalizedPath} className="route-enter">
           {renderPage()}
-        </Suspense>
+        </div>
       </main>
 
       <Footer onNavigate={navigate} />
+
+      {normalizedPath !== '/admin' && <FloatingActionDock />}
+      <CursorDot />
 
       <ProjectInquiryModal
         isOpen={inquiryModalOpen}
@@ -267,11 +266,13 @@ function RouterShell() {
 export default function App() {
   return (
     <AppErrorBoundary>
-      <AuthProvider>
-        <CmsProvider>
-          <RouterShell />
-        </CmsProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <CmsProvider>
+            <RouterShell />
+          </CmsProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </AppErrorBoundary>
   );
 }
