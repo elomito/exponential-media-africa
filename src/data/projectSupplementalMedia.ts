@@ -1,3 +1,14 @@
+export const OFFICIAL_LOGO_URL =
+  '/assets/profile/brand/exp-logo-dark.png';
+
+export const OFFICIAL_BRAND_ASSETS = {
+  logoUrl: '/assets/profile/brand/exp-logo-dark.png',
+  headerLogoUrl: '/assets/profile/brand/exp-logo-red.png',
+  footerLogoUrl: '/assets/profile/brand/exp-logo-white.png',
+  markUrl: '/assets/profile/brand/exp-mark.png',
+  darkLockupUrl: '/assets/profile/brand/exp-logo-dark.png',
+};
+
 interface SupplementalEntry {
   market?: string;
   creators?: string[];
@@ -5,19 +16,57 @@ interface SupplementalEntry {
 }
 
 export const PROJECT_SUPPLEMENTAL_MEDIA: Record<string, SupplementalEntry> = {
+  'cinnamon-energies-complete-brand-identity': {
+    market: 'Nairobi & Regional East Africa',
+    gallery: [
+      {
+        imageUrl: '/assets/profile/work/cinnamon-energies-identity.jpg',
+        caption:
+          'Complete Cinnamon Energies identity showcase featuring the geometric emblem, #EF4136 coral-red and emerald palette, stationery, and branded apparel.',
+      },
+      {
+        imageUrl: '/assets/profile/work/visual-design-studio.jpg',
+        caption:
+          'Identity grid engineering, typography scaling, and brand guideline documentation prepared for corporate and field deployment.',
+      },
+      {
+        imageUrl: '/assets/profile/work/print-design-showcase.jpg',
+        caption:
+          'Print collateral standards extending the identity system across company profiles, corporate brochures, and presentation materials.',
+      },
+    ],
+  },
+  'pepsi-kenya-market-entry-influencer-campaign': {
+    market: 'Kenya (National Rollout)',
+    creators: ['Kenyan Food & Lifestyle Creators', 'Digital Youth Culture Voices'],
+    gallery: [
+      {
+        imageUrl: '/assets/profile/work/pepsi-kenya-entry.jpg',
+        caption:
+          'Pepsi Kenya market entry announcement spotlighting joint QSR meal combos with Pizza Inn and Chicken Inn.',
+      },
+      {
+        imageUrl: '/assets/profile/work/pepsi-creators-row.jpg',
+        caption:
+          'Coordinated creator campaign wave driving mass awareness across TikTok, Instagram, and X during launch week.',
+      },
+    ],
+  },
   'ocean-basket-westgate-influencer-engagement': {
-    market: 'Nairobi, Kenya',
+    market: 'Westgate Mall, Nairobi, Kenya',
     creators: ['Royal Vee', 'Cera Imani', 'Nimrat Channa', 'Nadia Albana'],
     gallery: [
       {
         imageUrl: '/assets/profile/work/ocean-basket-westgate.jpg',
-        caption: 'Signature seafood dining showcase for Ocean Basket Westgate Mall',
+        caption:
+          'Signature seafood dining showcase highlighting Ocean Basket Westgate Mall hospitality and platters.',
       },
       {
         imageUrl: '/assets/profile/work/ocean-basket-creators.jpg',
-        caption: 'Creator partners: Royal Vee, Cera Imani, Nimrat Channa & Nadia Albana',
-      }
-    ]
+        caption:
+          'Creator partners: Royal Vee, Cera Imani, Nimrat Channa & Nadia Albana producing in-venue dining reels.',
+      },
+    ],
   },
   'grill-shack-lifestyle-food-influencer-campaigns': {
     market: 'Nairobi, Kenya',
@@ -25,13 +74,15 @@ export const PROJECT_SUPPLEMENTAL_MEDIA: Record<string, SupplementalEntry> = {
     gallery: [
       {
         imageUrl: '/assets/profile/work/grill-shack-dining.jpg',
-        caption: 'Steaks, ribs, and burgers positioning for The Grill Shack',
+        caption:
+          'Steaks, ribs, and artisanal burgers dining narrative captured for The Grill Shack Nairobi.',
       },
       {
         imageUrl: '/assets/profile/work/grill-shack-creators.jpg',
-        caption: 'Lifestyle & food creators: Sue Owino, Rita Kimwemwe, Leilah Watts & Naomi Kuria',
-      }
-    ]
+        caption:
+          'Lifestyle & culinary creators: Sue Owino, Rita Kimwemwe, Leilah Watts & Naomi Kuria.',
+      },
+    ],
   },
   'marhaba-stop-and-shop-shell-select-retail-campaigns': {
     market: 'Kenya',
@@ -39,80 +90,129 @@ export const PROJECT_SUPPLEMENTAL_MEDIA: Record<string, SupplementalEntry> = {
     gallery: [
       {
         imageUrl: '/assets/profile/work/retail-select-marhaba.jpg',
-        caption: 'In-store promotional awareness across Shell Select, Stop & Shop, and Marhaba',
+        caption:
+          'Promotional retail storytelling across Shell Select, Stop & Shop, and Marhaba consumer touchpoints.',
       },
       {
         imageUrl: '/assets/profile/work/retail-select-creators.jpg',
-        caption: 'Campaign creators: Krisbabyy, Joy Mwendwa, Flossy Trukid & Malu',
-      }
-    ]
+        caption:
+          'Campaign creators Krisbabyy, Joy Mwendwa, Flossy Trukid & Malu demonstrating in-store savings.',
+      },
+    ],
   },
   'galitos-launch-sauce-sampling-activations': {
     market: 'Narok, Waiyaki Way & BBS Mall, Kenya',
     gallery: [
       {
         imageUrl: '/assets/profile/work/galitos-waiyaki-way.jpg',
-        caption: 'Galito\'s Waiyaki Way opening experiential activation',
+        caption: "Galito's Waiyaki Way opening experiential activation with branded street presence.",
       },
       {
         imageUrl: '/assets/profile/work/galitos-narok-launch-1.jpg',
-        caption: 'Galito\'s Narok branch launch roadshow & flyer outreach',
+        caption: "Galito's Narok branch launch roadshow, branded arch & high-footfall outreach.",
       },
       {
         imageUrl: '/assets/profile/work/galitos-narok-launch-2.jpg',
-        caption: 'Galito\'s Narok team engaging local customers',
+        caption: "Galito's Narok activation ambassadors engaging local commuters and families.",
       },
       {
         imageUrl: '/assets/profile/work/galitos-sauce-sampling-1.jpg',
-        caption: 'Galito\'s BBS Mall interactive sauce tasting station',
+        caption: "Galito's BBS Mall interactive peri-peri sauce tasting station.",
       },
       {
         imageUrl: '/assets/profile/work/galitos-sauce-sampling-2.jpg',
-        caption: 'On-ground product sampling tour with brand ambassadors',
-      }
-    ]
+        caption: 'On-ground product sampling tour driving direct flavor trial and basket conversion.',
+      },
+    ],
   },
   'chicken-inn-retail-events-mall-activations': {
     market: 'Nairobi (BBS Mall, Lucky Summer & Retail Locations)',
     gallery: [
       {
         imageUrl: '/assets/profile/work/chicken-inn-bbs-mall-1.jpg',
-        caption: 'Chicken Inn BBS Mall in-store brand activation & flyer engagement',
+        caption: 'Chicken Inn BBS Mall in-store brand activation & shopper engagement.',
       },
       {
         imageUrl: '/assets/profile/work/chicken-inn-bbs-mall-2.jpg',
-        caption: 'Shopper interaction during BBS Mall promotional campaign',
+        caption: 'Direct customer interaction and promotional outreach inside BBS Mall.',
       },
       {
         imageUrl: '/assets/profile/work/chicken-inn-valentines.jpg',
-        caption: 'Chicken Inn Valentine\'s Day seasonal brand activation',
+        caption: "Chicken Inn Valentine's Day seasonal brand activation and engagement zone.",
       },
       {
         imageUrl: '/assets/profile/work/chicken-inn-lucky-summer.jpg',
-        caption: 'Lucky Summer branch opening activation',
+        caption: 'Lucky Summer branch opening activation and community outreach.',
       },
       {
         imageUrl: '/assets/profile/work/chicken-inn-champs.jpg',
-        caption: 'Chicken Inn Champs semi-finals fan experience & activation',
-      }
-    ]
+        caption: 'Chicken Inn Champs semi-finals fan engagement experience.',
+      },
+    ],
   },
   'pizza-inn-galitos-gtc-mall-nakuru-launches': {
     market: 'GTC Mall (Nairobi) & Basic 58 (Nakuru), Kenya',
     gallery: [
       {
         imageUrl: '/assets/profile/work/pizza-galitos-gtc-mall.jpg',
-        caption: 'Pizza Inn & Galito\'s joint GTC Mall opening activation',
+        caption: "Pizza Inn & Galito's joint GTC Mall opening activation in Westlands, Nairobi.",
       },
       {
         imageUrl: '/assets/profile/work/nakuru-basic58-launch.jpg',
-        caption: 'Basic 58 Nakuru grand launch activation & crowd engagement',
-      }
-    ]
+        caption: 'Basic 58 Nakuru grand launch activation & high-energy crowd engagement.',
+      },
+    ],
   },
-};
-
-export const OFFICIAL_BRAND_ASSETS = {
-  markUrl: '/assets/profile/brand/exp-mark.png',
-  darkLockupUrl: '/assets/profile/brand/exp-logo-dark.png',
+  'kcb-corporate-event-management': {
+    market: 'Nairobi, Kenya',
+    gallery: [
+      {
+        imageUrl: '/assets/profile/work/kcb-event-1.jpg',
+        caption: 'Custom branded KCB registration counters, feather flags, and outdoor event setup.',
+      },
+      {
+        imageUrl: '/assets/profile/work/kcb-event-2.jpg',
+        caption: 'Uniformed hospitality ambassadors managing delegate welcome and accreditation.',
+      },
+    ],
+  },
+  'content-creation-tecno-big5-qsr-production': {
+    market: 'Nairobi & Regional Kenya',
+    gallery: [
+      {
+        imageUrl: '/assets/profile/work/content-studio-chair.jpg',
+        caption: 'Commercial content production set configured for lifestyle and product storytelling.',
+      },
+      {
+        imageUrl: '/assets/profile/work/promotional-posts-grid.jpg',
+        caption: 'Multi-format digital campaign cuts adapted for Instagram, TikTok, and paid placements.',
+      },
+    ],
+  },
+  'digital-paperboy-and-schoolbooks-identity-systems': {
+    market: 'Kenya & East Africa',
+    gallery: [
+      {
+        imageUrl: '/assets/profile/work/digital-paperboy-identity.jpg',
+        caption: 'Digital Paperboy brand book covering Mountella typography and modular logo rules.',
+      },
+      {
+        imageUrl: '/assets/profile/work/schoolbooks-identity.jpg',
+        caption: 'Schoolbooks identity grid, Prussian Blue & Wiki Green color specification.',
+      },
+    ],
+  },
+  'toyworld-kenya-styroplast-social-media-management': {
+    market: 'Kenya',
+    gallery: [
+      {
+        imageUrl: '/assets/profile/work/toyworld-social-showcase.jpg',
+        caption: 'Structured social media grid and seasonal retail promotional campaigns for ToyWorld Kenya.',
+      },
+      {
+        imageUrl: '/assets/profile/work/styroplast-social-showcase.jpg',
+        caption: 'B2B and distributor social feed architecture created for Styroplast Group.',
+      },
+    ],
+  },
 };

@@ -14,8 +14,12 @@ export { VERIFIED_CONTACT } from './verifiedContact';
 export type { VerifiedContact } from './verifiedContact';
 
 export const OFFICIAL_BRAND_ASSETS = {
+  logoUrl: '/assets/profile/brand/exp-logo-dark.png',
+  headerLogoUrl: '/assets/profile/brand/exp-logo-red.png',
+  footerLogoUrl: '/assets/profile/brand/exp-logo-white.png',
   markUrl: '/assets/profile/brand/exp-mark.png',
   darkLockupUrl: '/assets/profile/brand/exp-logo-dark.png',
+  aboutWhoWeAreUrl: '/assets/profile/work/visual-design-studio.jpg',
 };
 
 export const TERRITORY_MARKETS = [
@@ -55,7 +59,6 @@ export const PORTFOLIO_CATEGORIES: PortfolioCategory[] = [
   'Branding',
 ];
 
-// Core Values in official I.D.E.A.L. sequence (Company Profile PDF, Page 3)
 export const CORE_VALUES = [
   {
     id: 'innovative',
@@ -104,7 +107,6 @@ export const CORE_VALUES = [
   },
 ];
 
-// Integrated Delivery Practices reflecting documented Company Profile services
 export const DIVISIONS: DivisionMeta[] = [
   {
     id: 'creative',
@@ -113,81 +115,81 @@ export const DIVISIONS: DivisionMeta[] = [
     tagline: 'Bold Design. Lasting Impact.',
     description:
       'Compelling visual identities and communication collateral—from logo development and complete brand guidelines to posters, roll-up banners, brochures, promotional posts, and packaging.',
-    accentHex: '#ED2126',
+    accentHex: '#ED1B24',
     imageUrl: '/assets/profile/work/cinnamon-energies-identity.jpg',
-    imageAlt: 'Cinnamon Energies brand identity suite designed by Exponential Media Africa',
+    imageAlt: 'Cinnamon Energies brand identity suite designed by Exponential Marketing Agency',
     ecosystemRole:
       'Establishes memorable brand recognition and visual consistency across digital and print.',
     services: [
+      'Visual Design',
       'Logo & brand identity systems',
       'Digital & print graphic design',
       'Promotional posters & banners',
       'Brochures & company profiles',
       'Packaging & merchandise design',
-      'Social media post systems',
     ],
   },
   {
     id: 'estudios',
-    name: 'Content Creation & Production',
-    shortName: 'Content & Production',
+    name: 'Content Creation & Marketing',
+    shortName: 'Content & Marketing',
     tagline: 'Stories That Build Brands & Drive Action.',
     description:
-      'End-to-end concept development, copywriting, commercial photography, videography, motion graphics, and editorial production crafted for high-performing advertising campaigns.',
-    accentHex: '#ED2126',
+      'End-to-end concept development, copywriting, commercial photography, videography, motion graphics, and editorial storytelling crafted for high-performing advertising campaigns.',
+    accentHex: '#ED1B24',
     imageUrl: '/assets/profile/work/content-studio-chair.jpg',
-    imageAlt: 'Exponential Media Africa commercial content production lighting and set',
+    imageAlt: 'Exponential Marketing Agency commercial content creation and set',
     ecosystemRole:
       'Turns brand messaging into crisp commercial photography, video, and copy tailored to each platform.',
     services: [
+      'Content Creation & Marketing',
       'Commercial photography',
       'Commercial videography',
       'Copywriting & script development',
       'Motion graphics & editing',
-      'Blog articles & editorial copy',
       'Multi-format content strategy',
     ],
   },
   {
     id: 'marketing',
-    name: 'Digital, Influencer & Media Buy',
-    shortName: 'Digital & Influencer',
+    name: 'Social Media, Influencer & Media Buying',
+    shortName: 'Social, Creators & Media',
     tagline: 'Always Present. Targeted Reach.',
     description:
       'Strategic social media management across Meta and TikTok, vetted influencer marketing partnerships, and data-informed media buying designed to maximize return on ad spend.',
-    accentHex: '#ED2126',
+    accentHex: '#ED1B24',
     imageUrl: '/assets/profile/work/pepsi-kenya-entry.jpg',
     imageAlt: 'Pepsi Kenya market-entry influencer marketing collaboration campaign',
     ecosystemRole:
       'Connects audiences with consistent daily publishing, trusted creator voices, and targeted paid placements.',
     services: [
-      'Social media management (Meta & TikTok)',
-      'Influencer sourcing, vetting & contracts',
-      'Paid media planning & buying',
-      'Audience targeting & optimization',
+      'Social Media Management',
+      'Influencer Marketing',
+      'Media Buying',
       'Community & reputation management',
+      'Audience targeting & optimization',
       'Campaign performance reporting',
     ],
   },
   {
     id: 'emtc',
-    name: 'Brand Activation & Events',
+    name: 'Brand Activation',
     shortName: 'Brand Activation',
     tagline: 'Bringing Brands to Life.',
     description:
-      'High-impact consumer engagement including store launch roadshows, in-store promotions, product sampling tours, mall activations, creator workshops, and branded event execution.',
-    accentHex: '#ED2126',
+      'High-impact consumer engagement including store launch roadshows, in-store promotions, product sampling tours, mall activations, creator workshops, and live brand experiences.',
+    accentHex: '#ED1B24',
     imageUrl: '/assets/profile/work/galitos-waiyaki-way.jpg',
-    imageAlt: "Galito's Waiyaki Way experiential brand activation executed by Exponential team",
+    imageAlt: "Galito's Waiyaki Way experiential brand activation executed by Exponential Marketing Agency",
     ecosystemRole:
       'Translates digital visibility into live consumer participation and memorable product trial.',
     services: [
-      'Experiential marketing campaigns',
+      'Brand Activation',
       'Store launch roadshows',
       'Product sampling tours',
       'In-store mall promotions',
-      'Event management & ambassador hosting',
-      'Live workshops & demonstrations',
+      'Experiential marketing campaigns',
+      'Brand ambassador hosting',
     ],
   },
 ];
@@ -201,8 +203,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   headquartersAddress: VERIFIED_CONTACT.headquartersAddress,
   campusAddress: '',
   socialLinks: {
-    instagram: '',
-    linkedin: '',
+    instagram: VERIFIED_CONTACT.instagramUrl,
+    linkedin: VERIFIED_CONTACT.linkedinUrl,
     youtube: '',
     x: '',
   },
@@ -225,7 +227,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
       id: 'projectsCompleted',
       label: 'Core Capabilities',
       value: '6 Services',
-      unitOrContext: 'Social, Content, Influencer, Media Buy, Activation & Design',
+      unitOrContext: 'Social, Content, Influencer, Media Buying, Activation & Visual Design',
       isPlaceholder: false,
     },
     campaignsExecuted: {
@@ -282,7 +284,7 @@ export const DEFAULT_SERVICES: ServiceItem[] = [
   {
     id: 'srv-marketing-4',
     division: 'marketing',
-    title: 'Media Buy',
+    title: 'Media Buying',
     problemSolved: 'Places campaign messages before target buyers at the right time for better ad ROI.',
     description:
       'Strategic media planning, audience targeting, budget allocation, paid ad placement, continuous campaign optimization, and transparent performance reporting.',
@@ -293,10 +295,10 @@ export const DEFAULT_SERVICES: ServiceItem[] = [
   {
     id: 'srv-emtc-1',
     division: 'emtc',
-    title: 'Brand Activation & Events',
+    title: 'Brand Activation',
     problemSolved: 'Turns passive awareness into live consumer participation and product trial.',
     description:
-      'Experiential marketing campaigns, pop-up events, product sampling tours, in-store promotions, branch opening roadshows, live demonstrations, and interactive brand activations.',
+      'Experiential marketing campaigns, pop-up experiences, product sampling tours, in-store promotions, branch opening roadshows, live demonstrations, and interactive brand activations.',
     order: 5,
     status: 'published',
     isDeleted: false,
@@ -304,7 +306,7 @@ export const DEFAULT_SERVICES: ServiceItem[] = [
   {
     id: 'srv-creative-1',
     division: 'creative',
-    title: 'Visual Design & Brand Identity',
+    title: 'Visual Design',
     problemSolved: 'Unifies brand perception with clear, distinctive digital and print design.',
     description:
       'Logo design and complete brand identity systems, graphic design for digital and print, promotional posters, roll-up banners, brochures, packaging, social media creatives, and corporate branding.',
@@ -401,7 +403,7 @@ export const DEFAULT_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     division: 'creative',
     clientName: 'Cinnamon Energies',
     summary:
-      'Client brand identity architecture crafted by Exponential Media Africa, featuring geometric emblem design, typography specification, color system, stationery, and branded apparel.',
+      'Client brand identity architecture crafted by Exponential Marketing Agency, featuring geometric emblem design, typography specification, color system, stationery, and branded apparel.',
     challenge:
       'Developing a cohesive visual identity adaptable across corporate letterheads, business cards, branded polo shirts, and caps.',
     solution:
@@ -621,7 +623,7 @@ export const DEFAULT_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     division: 'creative',
     clientName: 'Digital Paperboy & Schoolbooks',
     summary:
-      'Client brand identity guides crafted by Exponential Media Africa—including logo geometry, typography rules, and color systems for Digital Paperboy and Schoolbooks.',
+      'Client brand identity guides crafted by Exponential Marketing Agency—including logo geometry, typography rules, and color systems for Digital Paperboy and Schoolbooks.',
     challenge:
       'Providing distinct, scalable brand systems tailored specifically to two independent client platforms across web, mobile, and print.',
     solution:
@@ -698,17 +700,40 @@ export const DEFAULT_ARTICLES: InsightArticle[] = [
     category: 'Industry Articles',
     excerpt:
       'When visual design, content creation, influencer partnerships, paid media buying, and on-ground activations operate in silos, campaign momentum breaks before reaching the buyer.',
-    body: `Across Kenya, Uganda, Rwanda, DRC, and Zambia, ambitious consumer and enterprise brands often divide their visual design, content shoots, social management, media buying, and mall activations across separate suppliers.
+    body: `## The Cost of Disconnected Brand Execution
 
-The hidden cost of fragmentation is strategic drift. A message crafted in a creative brief rarely survives intact when handed to a disconnected production vendor or field team.
+Across Kenya, Uganda, Rwanda, the Democratic Republic of Congo, and Zambia, ambitious consumer and enterprise brands regularly divide their creative and distribution stack across four or five disconnected vendors. One freelancer handles logos and posters, a separate studio shoots video, a digital agency buys Meta ads, a talent broker recruits creators, and an independent field team runs retail activations.
 
-At Exponential Media Africa, our integrated capabilities unite Visual Design, Content Creation & Marketing, Social Media Management, Influencer Marketing, Media Buy, and Brand Activation under one coordinated roof.
+On paper, splitting scopes looks economical. In commercial practice, every handoff strips away context, speed, and accountability. By the time a visual campaign reaches an audience in Nairobi, Kampala, or Kigali, the social feed no longer resembles the packaging on shelf, paid media creatives do not match the creator narrative, and retail staff cannot articulate the digital offer.
 
-From our Nairobi headquarters at Casamia along Ngong Road, one aligned team takes a brand seamlessly from identity design and photography through TikTok and Meta campaigns, paid ad optimization, and live customer activations.`,
+## Where Momentum Breaks in Fragmented Campaigns
+
+- Visual identity drifts between print banners, social media grids, and retail displays because no single art director owns brand consistency.
+- Content shoots run without paid media buying insights, producing beautiful assets that fail hook-rate and click-through thresholds in the first three seconds.
+- Influencer storytelling launches weeks before or after stock availability or on-ground mall activations, wasting peak search and purchase intent.
+- Reporting stays trapped in vanity impressions because no unified team connects digital engagement to footfall, sampling volume, and sales inquiries.
+
+## Connecting Six Core Capabilities Under One Roof
+
+At Exponential Marketing Agency, we structure every mandate around six tightly linked disciplines: Social Media Management, Content Creation & Marketing, Influencer Marketing, Media Buying, Brand Activation, and Visual Design.
+
+When strategy starts at A3-10 Casamia along Ngong Road in Kilimani, the same strategic brief guides every downstream specialist. Visual Design establishes crisp typography, packaging, and digital artwork systems. Content Creation & Marketing translates those visual rules into scripted short-form reels, commercial photography, and editorial copy tailored for East African audiences.
+
+Social Media Management and Influencer Marketing then build sustained community participation around the core narrative, while Media Buying amplifies top-performing creator and studio assets directly to high-intent buyers. Finally, Brand Activation brings the exact same campaign promise into physical shopping centres, universities, convenience stores, and launch roadshows.
+
+## Commercial Advantages for Regional Rollouts
+
+- Unified creative turnaround: Assets move from brief to visual approval, production, and media launch without multi-vendor translation delays.
+- Shared audience intelligence: Live insights from community comments, paid click-through data, and shopper sampling feed back into weekly creative optimization.
+- Consistent cross-border identity: Whether launching a QSR branch in Nakuru or expanding consumer products across Uganda, Rwanda, DRC, or Zambia, brand recall compounds with every impression.
+
+## How Marketing Leaders Audit Readiness
+
+Before commissioning your next quarterly push, verify whether every team touching the customer shares one campaign calendar, one visual toolkit, and one commercial dashboard. Integrating all six capabilities under one agency roof turns scattered marketing spend into sustained market share.`,
     authorName: 'Exponential Strategy Team',
-    authorRole: 'Exponential Media Africa, Nairobi',
+    authorRole: 'Exponential Marketing Agency, Nairobi',
     publishedDate: '2026-10-18',
-    readTime: '4 min read',
+    readTime: '7 min read',
     imageUrl: '/assets/profile/work/cinnamon-energies-identity.jpg',
     featured: true,
     status: 'published',
@@ -721,15 +746,31 @@ From our Nairobi headquarters at Casamia along Ngong Road, one aligned team take
     category: 'Marketing Insights',
     excerpt:
       'How QSR, retail, and consumer brands pair vetted creator storytelling with in-store sampling and launch roadshows to turn attention into product trial.',
-    body: `Digital reach in East Africa is highly interactive, yet online impressions deliver strongest commercial impact when connected directly to physical consumer touchpoints.
+    body: `## Why Digital Attention Alone Rarely Closes First-Time Trial
 
-Whether announcing a national market entry, opening a new retail branch in Nakuru or Narok, or driving awareness for seasonal in-store promotions, trusted creators spark curiosity while experiential roadshows, sauce sampling, and trained brand ambassadors convert interest into trial.
+Digital reach in Kenya and across East Africa is vibrant and social-first, yet impressions on TikTok and Instagram achieve their highest commercial return when linked seamlessly to physical product interaction. Consumers discover new menu items, beverages, electronics, or retail promotions on their feeds, then validate them in person at malls, neighbourhood stores, and university campuses.
 
-When creator partnerships, paid media buying, and on-ground activations share a single strategy and reporting cadence, brands build lasting community momentum both online and in store.`,
+When a national beverage launch, QSR branch opening, or seasonal retail discount relies solely on social posts without ground energy, awareness stalls in the feed. Equally, when roadshows run without coordinated creator storytelling and local geo-targeted media buying, passers-by miss the cultural context behind the activation.
+
+## The Three-Phase Creator-to-Retail Playbook
+
+- Phase 1 — Teaser & Vetted Creator Briefing: Select authentic lifestyle, dining, and retail creators whose audience demographics and geography match the target outlet catchment—from Westlands and Kilimani to Narok and Nakuru.
+- Phase 2 — Synchronized Live Activation: Deploy uniformed brand ambassadors, sampling booths, red-carpet hospitality, and live creator walkthroughs simultaneously during peak shopping windows.
+- Phase 3 — Post-Event Amplification & Retargeting: Edit high-energy consumer reaction footage on location into fast-turnaround reels reinforced through targeted Meta and TikTok media buying.
+
+## Lessons from Kenyan QSR, Dining, and Convenience Campaigns
+
+Across major collaborations involving Pepsi, Chicken Inn, Galito's, Pizza Inn, Ocean Basket Westgate, Shell Select, and Stop & Shop, combining creator trust with disciplined ground logistics transforms ordinary promotions into shared community events.
+
+Creators attend tastings and store launches not as detached spokespeople reading rigid scripts, but as participants guiding their followers into real physical venues. On-ground brand ambassadors mirror the exact visual messaging and promo codes highlighted online, removing friction between scrolling a phone screen and redeeming an offer at the counter.
+
+## Structuring Creator Contracts & Ground Standards
+
+Effective hybrid campaigns require clear deliverables on both sides: vetted creator briefs with transparent usage rights for paid amplification, paired with trained ambassador rosters, crisp pull-up displays, stock coordination, and daily quantitative tallies covering samples distributed, redemptions, and creator reach.`,
     authorName: 'Exponential Marketing Desk',
     authorRole: 'Influencer & Activation Practice',
     publishedDate: '2026-09-29',
-    readTime: '4 min read',
+    readTime: '6 min read',
     imageUrl: '/assets/profile/work/galitos-waiyaki-way.jpg',
     featured: false,
     status: 'published',
@@ -742,24 +783,89 @@ When creator partnerships, paid media buying, and on-ground activations share a 
     category: 'Creative Trends',
     excerpt:
       'Why cohesive typography, intentional photography and videography, and disciplined social media grids separate memorable brands from noisy feeds.',
-    body: `Visual storytelling sits at the center of digital trust. Audiences assess credibility within seconds—comparing every promotional graphic, company brochure, TikTok reel, and exhibition banner side by side.
+    body: `## First-Second Trust in Competitive Feeds
 
-By pairing clear visual identity rules with custom concept-to-production photography, videography, and structured Meta and TikTok content calendars, Exponential Media Africa helps brands show up consistently across every customer touchpoint.`,
+In crowded categories—from Quick Service Restaurants and fintech to real estate, manufacturing, and consumer packaged goods—audiences form quality judgements within a single scroll. Potential buyers compare exhibition pull-up banners, LinkedIn company profiles, Instagram carousels, and retail packaging side by side before ever booking a consultation or stepping into a store.
+
+When typography shifts randomly from post to post or dark smartphone snapshots sit next to polished corporate proposals, institutional credibility erodes quietly. Strong visual design and commercial content production are not cosmetic expenses; they are trust multipliers that shorten sales cycles and justify stronger pricing across regional markets.
+
+## Why Disjointed Brand Collateral Loses Buyers
+
+Across East Africa, many growing organisations invest heavily in a brand logo once during launch, then hand day-to-day social graphics and sales collateral to hurried internal drafts or rotating freelancers without art direction. Within six months, the brand looks like five unrelated companies depending on whether a prospect meets them on TikTok, in an investor deck, or at a trade booth in Nairobi.
+
+- Inconsistent color spaces between digital screens (RGB/HEX) and printed banners or retail signage (CMYK) dilute shelf recognition.
+- Missing typographic rules force every promotional flyer to invent new display hierarchies, hiding key offers and calls to action.
+- Static product templates recycled without fresh studio photography reduce feed engagement and push paid Media Buying costs upward.
+
+## Pillars of a Scalable African Brand System
+
+- Disciplined Identity Guidelines: Establish exact logo clear space, typographic hierarchy, color values across RGB, HEX, and CMYK, and modular grid rules so every designer produces unmistakable work.
+- Purpose-Built Commercial Photography & Video: Replace generic stock visuals with custom location shoots reflecting real Kenyan and regional environments, products, menus, and customer teams.
+- Platform-Native Social Templates: Translate core visual rules into fast-to-produce Instagram feeds, promotional carousels, TikTok video covers, and Meta ad variations.
+- Print-to-Screen Alignment: Keep brochures, packaging boxes, branded apparel, vehicle wraps, and digital banners visually synchronized across every B2B and retail encounter.
+
+## How Content Strategy Converts Visual Identity into Growth
+
+A visual system gains commercial value when paired with intentional storytelling. Commercial copywriting, motion graphics, product breakdowns, and educational carousels ensure every frame answers a buyer question—why the product exists, how it solves a daily need, and where to purchase it.
+
+At Exponential Marketing Agency, our Visual Design and Content Creation & Marketing teams collaborate side by side from concept script to colour-graded final export. Whether producing packaging and brand bibles for technology and energy clients or structuring crisp daily social grids for retail chains, disciplined visual craft ensures brand equity compounds with every asset shipped.`,
     authorName: 'Exponential Creative Desk',
     authorRole: 'Visual Design & Content Practice',
     publishedDate: '2026-09-12',
-    readTime: '3 min read',
+    readTime: '7 min read',
     imageUrl: '/assets/profile/work/visual-design-studio.jpg',
+    featured: false,
+    status: 'published',
+    isDeleted: false,
+  },
+  {
+    id: 'art-media-buying-roi',
+    slug: 'data-informed-media-buying-and-social-growth-east-africa',
+    title: 'Turning Social Presence into Measurable ROI with Data-Informed Media Buying',
+    category: 'Educational Content',
+    excerpt:
+      'How structured audience segmentation, creative testing, and full-funnel social media management maximize advertising efficiency across Kenya and regional markets.',
+    body: `## Moving Beyond Boosted Posts
+
+One of the most common leaks in regional marketing budgets is treating "boosting" individual social posts as a media strategy. Without structured funnel stages, clear conversion events, and deliberate creative variation, ad platforms spend budget on low-intent clicks that rarely translate into store visits or qualified B2B briefs.
+
+Effective Media Buying starts well before campaign managers open Meta Ads Manager or TikTok Ads. It starts by matching audience intent to creative angle—building distinct messaging tracks for brand awareness, product consideration, location-based store traffic, and direct lead capture.
+
+## Why Social Management and Paid Media Must Share One Desk
+
+When community managers and media buyers sit on separate teams, paid ads drive traffic into unmonitored comment threads while high-performing organic Reels never receive distribution budget. Integrating Social Media Management with Media Buying removes that gap immediately.
+
+- Real-Time Comment Intelligence: Questions raised under sponsored posts reveal pricing friction, delivery concerns, or outlet confusion within hours so ad copy can adapt quickly.
+- Budget Pacing Around Retail Peaks: Weekend dining rushes, pay-day cycles, university term openings, and seasonal promos receive heavier delivery weight while quiet windows avoid wasted impressions.
+- Format-Specific Vertical Framing: Studio photography, portrait Reels, and carousel explainers are cut specifically for Stories, Feed, and Search rather than cropped from landscape leftovers.
+
+## Building a High-Return Media & Social Architecture
+
+- Clear Campaign Objectives: Separate upper-funnel reach and video views from lower-funnel lead forms, WhatsApp inquiries, and regional store promotions.
+- Weekly Creative Iteration: Test multiple opening hooks, headline overlays, and calls to action sourced directly from our Content Creation & Marketing and Influencer teams.
+- Active Community Management: Fast, knowledgeable replies on comments and direct messages convert ad curiosity into real customer conversations and trust.
+- Geographic & Audience Precision: Configure city, mall-radius, and cross-border targeting across Kenya, Uganda, Rwanda, DRC, and Zambia based on distribution footprint.
+
+## Integrating Creator Whitelisting & Paid Amplification
+
+Top-performing creator videos from Influencer Marketing campaigns consistently outperform traditional studio ads on cost-per-engagement and watch time. By securing clear usage permissions upfront and amplifying creator assets through targeted Media Buying audiences, brands capture both organic creator credibility and deterministic paid scale.
+
+## Transparent Performance Reporting
+
+Every monthly review connects spend directly to reach quality, cost per engagement, lead volume, and on-ground store traffic, giving marketing directors clear evidence to scale winning creatives and cut underperforming placements quickly across East, Central, and Southern Africa.`,
+    authorName: 'Exponential Media Desk',
+    authorRole: 'Social Media & Media Buying Practice',
+    publishedDate: '2026-08-24',
+    readTime: '7 min read',
+    imageUrl: '/assets/profile/work/content-studio-chair.jpg',
     featured: false,
     status: 'published',
     isDeleted: false,
   },
 ];
 
-// No invented client testimonials — only real authorised testimonials added via CMS are displayed publicly
 export const DEFAULT_TESTIMONIALS: TestimonialItem[] = [];
 
-// All 27 verified client organisations extracted from Official Company Profile PDF (Page 10)
 export const DEFAULT_CLIENT_LOGOS: ClientLogo[] = [
   {
     id: 'client-pepsi',
@@ -1033,5 +1139,4 @@ export const DEFAULT_CLIENT_LOGOS: ClientLogo[] = [
   },
 ];
 
-// Company Profile PDF contains no individual staff bios or employee profiles — none fabricated.
 export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [];
