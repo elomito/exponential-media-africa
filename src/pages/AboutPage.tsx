@@ -1,226 +1,503 @@
-import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, User } from 'lucide-react';
 import { OptimizedImage } from '../components/OptimizedImage';
+import { Reveal } from '../components/ScrollReveal';
 import { SeoHead } from '../components/SeoHead';
+import { WorldwidePartnersMarquee } from '../components/WorldwidePartnersMarquee';
 import { useCms } from '../context/CmsContext';
+import { useLanguage } from '../context/LanguageContext';
+import { EXECUTIVE_DIRECTOR_PORTRAIT, PAGE_HERO_IMAGES } from '../data/pageHeroes';
 import { CORE_VALUES, TERRITORY_MARKETS } from '../data/seedData';
-import { HERO_POSTER_IMAGE } from '../data/heroImage';
+import { CORE_SIX_SERVICES, getServiceSlug } from '../lib/portfolio';
 
 interface AboutPageProps {
   onNavigate: (path: string) => void;
   onOpenInquiry: () => void;
 }
 
+interface LeadershipSlot {
+  id: string;
+  name: string;
+  role: string;
+  division: string;
+  bio: string;
+  photoUrl?: string;
+}
+
+const DEFAULT_LEADERSHIP_SLOTS: LeadershipSlot[] = [
+  {
+    id: 'exec-duncan-aboka',
+    name: 'Duncan Aboka',
+    role: 'Executive Director',
+    division: 'Executive Leadership',
+    bio: 'Provides strategic direction, client partnerships, and regional oversight from Kilimani, Nairobi.',
+    photoUrl: EXECUTIVE_DIRECTOR_PORTRAIT,
+  },
+  {
+    id: 'dept-hr',
+    name: 'Human Resources',
+    role: 'People & Culture',
+    division: 'Human Resources',
+    bio: 'Leads talent acquisition, team development, and agency culture across our six core practices.',
+  },
+  {
+    id: 'dept-finance',
+    name: 'Finance',
+    role: 'Finance & Administration',
+    division: 'Finance Department',
+    bio: 'Oversees commercial budgeting, client billing governance, and regional operational compliance.',
+  },
+  {
+    id: 'dept-creative-delivery',
+    name: 'Creative & Campaign Lead',
+    role: 'Design, Content & Activations',
+    division: 'Campaign Operations',
+    bio: 'Coordinates visual design, content creation, social media, creator campaigns, media buying, and activations.',
+  },
+];
+
 export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
-  const { teamMembers } = useCms();
+  const { teamMembers, clientLogos } = useCms();
+  const { t, localizeValue, localizeMarket, localizeTeamSlot, localizeServiceBySlug } = useLanguage();
+  const [activeValueId, setActiveValueId] = useState(CORE_VALUES[0].id);
+
+  const rawSelectedValue = CORE_VALUES.find((v) => v.id === activeValueId) || CORE_VALUES[0];
+  const selectedValue = localizeValue(rawSelectedValue);
+
+  const teamSlots: LeadershipSlot[] = (
+    teamMembers.length > 0
+      ? [
+          ...teamMembers.map((m) => {
+            const defaultSlot = DEFAULT_LEADERSHIP_SLOTS.find(
+              (slot) =>
+                slot.id === m.id ||
+                slot.name.toLowerCase() === m.name.toLowerCase() ||
+                slot.role.toLowerCase() === m.role.toLowerCase()
+            );
+            return {
+              id: m.id,
+              name: m.name,
+              role: m.role,
+              division: m.division,
+              bio: m.bio,
+              photoUrl: m.photoUrl || defaultSlot?.photoUrl,
+            };
+          }),
+          ...DEFAULT_LEADERSHIP_SLOTS.filter(
+            (slot) =>
+              !teamMembers.some(
+                (m) =>
+                  m.name.toLowerCase() === slot.name.toLowerCase() ||
+                  m.role.toLowerCase() === slot.role.toLowerCase()
+              )
+          ),
+        ].slice(0, 4)
+      : DEFAULT_LEADERSHIP_SLOTS
+  ).map(localizeTeamSlot);
+
+  const heroWords = t.about.heroTitle.trim().split(/\s+/);
+  const splitIdx = Math.max(1, heroWords.length - 2);
+  const heroLead = heroWords.slice(0, splitIdx).join(' ');
+  const heroAccent = heroWords.slice(splitIdx).join(' ');
 
   return (
-    <div className="bg-[#0B0B0D] text-white">
+    <div>
       <SeoHead
-        title="About Us — Exponential Media Africa"
-        description="Learn about Exponential Media Africa's background, vision, mission, I.D.E.A.L. core values, and regional footprint from our Nairobi headquarters."
+        title={t.seo.aboutTitle}
+        description={t.seo.aboutDescription}
         path="/about"
+        imageUrl={PAGE_HERO_IMAGES.about}
+        imageAlt="Exponential Marketing Agency Kilimani Nairobi team strategist"
+        schemaType="AboutPage"
+        breadcrumbName={t.nav.about}
       />
 
-      {/* Header */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-16 border-b border-white/10">
-        <p className="inline-flex items-center gap-2.5 text-xs sm:text-sm font-bold tracking-[0.14em] uppercase text-[#FF1A1F] mb-4">
-          <span className="w-5 h-0.5 bg-[#FF1A1F]" aria-hidden="true" />
-          <span>About Exponential Media Africa</span>
-        </p>
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.04] max-w-4xl [text-wrap:balance] mb-5 sm:mb-6">
-          Imaginative Solutions for Exponential Growth.
-        </h1>
-        <p className="text-lg text-neutral-300 max-w-2xl leading-relaxed">
-          Headquartered at A3-10 Casamia along Ngong Road in Kilimani, Nairobi, Exponential Media Africa is a creative and marketing agency serving growth-minded brands across Kenya, Uganda, Rwanda, DRC, and Zambia.
-        </p>
+      <section className="relative bg-[#EAECEF] text-[#141923] overflow-hidden border-b-4 border-[#B81118] min-h-[380px] sm:min-h-[440px] lg:min-h-[min(560px,calc(100svh-4.5rem))] flex items-center">
+        <div className="absolute inset-0 pointer-events-none select-none hero-media-enter">
+          <OptimizedImage
+            src={PAGE_HERO_IMAGES.about}
+            alt="Exponential Marketing Agency strategist in red branded polo shirt at desk with laptop"
+            priority
+            width={1376}
+            height={768}
+            containerClassName="w-full h-full"
+            className="w-full h-full object-cover object-[74%_top] sm:object-top"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-r from-[#EFF1F4]/95 via-[#EAECEF]/82 via-58% to-[#EAECEF]/30 lg:via-[#EAECEF]/62 lg:via-45% lg:to-transparent lg:to-60%"
+          />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+          <div className="max-w-[86%] sm:max-w-[70%] lg:max-w-none lg:w-[50%] xl:w-[48%]">
+            <h1 className="text-[2.3rem] sm:text-5xl lg:text-[4.25rem] xl:text-[4.65rem] font-display font-bold tracking-[-0.04em] leading-[0.98] [text-wrap:balance] mb-4 sm:mb-6">
+              <span className="hero-slide-left block text-[#141923]">{heroLead}</span>
+              <span className="hero-slide-left-delay-1 block text-[#ED1B24]">{heroAccent}</span>
+            </h1>
+            <p className="hero-slide-left-delay-2 text-sm sm:text-lg text-[#2A1214] leading-relaxed max-w-lg mb-6 sm:mb-8">
+              {t.about.heroSubtitle}
+            </p>
+            <div className="hero-slide-left-delay-3">
+              <button
+                type="button"
+                onClick={onOpenInquiry}
+                className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-bold bg-[#ED1B24] hover:bg-[#B81118] text-white rounded-md transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap shadow-sm"
+              >
+                <span>{t.about.startProject}</span>
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Story & Visual */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 border-b border-white/10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          <div className="lg:col-span-6 space-y-6">
-            <h2 className="text-3xl font-display font-bold tracking-tight">Who We Are</h2>
-            <p className="text-base text-neutral-300 leading-relaxed">
-              Exponential Media Africa was built to solve a clear challenge facing ambitious organizations across Africa: strategy, visual branding, content creation, influencer marketing, paid media buying, and live activations too often operate in disconnected silos.
+      <section className="bg-[#B81118] text-white py-18 md:py-22">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          <Reveal variant="slide-left" className="lg:col-span-6 space-y-5">
+            <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-white">
+              {t.about.whoWeAre}
+            </h2>
+            <p className="text-base sm:text-lg text-white/95 leading-relaxed">
+              {t.about.whoWeAreP1}
             </p>
-            <p className="text-base text-neutral-400 leading-relaxed">
-              By bringing all six core services together under one coordinated agency team, we take brands seamlessly from visual identity systems and commercial photography to Meta and TikTok management, creator collaborations, targeted media buy, and memorable store launch activations.
+            <p className="text-base sm:text-lg text-white/90 leading-relaxed">
+              {t.about.whoWeAreP2}
             </p>
-            <div className="pt-2">
+            <div className="pt-1 flex flex-wrap items-center gap-4">
               <button
                 type="button"
                 onClick={() => onNavigate('/services')}
-                className="inline-flex items-center gap-2 text-sm font-bold text-[#FF1A1F] hover:text-white transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-3 text-sm font-bold bg-white hover:bg-white/90 text-[#9E0E15] rounded-md transition-colors"
               >
-                <span>Explore all six core services</span>
-                <ArrowRight className="w-4 h-4 text-[#ED2126]" aria-hidden="true" />
+                <span>{t.about.exploreSixServices}</span>
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </button>
-            </div>
-          </div>
-          <div className="lg:col-span-6 aspect-[4/3] lg:aspect-[5/4]">
-            <OptimizedImage
-              src={HERO_POSTER_IMAGE}
-              alt="Exponential Media Africa commercial content production setup in Nairobi"
-              width={1200}
-              height={800}
-              containerClassName="w-full h-full rounded-2xl border border-white/10"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Vision & Mission */}
-      <section className="bg-[#F8F8F7] text-[#111114] py-16 md:py-24 border-b border-neutral-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="py-6 sm:py-8 pr-4 sm:pr-8 border-t-2 border-[#ED2126]">
-            <div className="font-mono text-xs font-bold text-[#E50000] mb-3">01 · OUR VISION</div>
-            <h2 className="text-2xl font-display font-bold tracking-tight mb-4">
-              Africa&apos;s benchmark creative media agency.
-            </h2>
-            <p className="text-base text-neutral-600 leading-relaxed">
-              To become the leading creative media agency in Africa through knowledge, technology, and exemplary culture.
-            </p>
-          </div>
-          <div className="py-6 sm:py-8 pr-4 sm:pr-8 border-t-2 border-neutral-300">
-            <div className="font-mono text-xs font-bold text-[#E50000] mb-3">02 · OUR MISSION</div>
-            <h2 className="text-2xl font-display font-bold tracking-tight mb-4">
-              Helping brands stand out in the digital age.
-            </h2>
-            <p className="text-base text-neutral-600 leading-relaxed">
-              To Help Brands and Companies stand out in the digital age—uniting visual design, content creation, social media management, influencer partnerships, media buying, and experiential activations.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Core Values */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 border-b border-white/10">
-        <div className="mb-12">
-          <p className="inline-flex items-center gap-2.5 text-xs sm:text-sm font-bold tracking-wide text-[#FF1A1F] mb-2">
-            <span className="w-5 h-0.5 bg-[#FF1A1F]" aria-hidden="true" />
-            <span>I.D.E.A.L. Framework</span>
-          </p>
-          <h2 className="text-3xl font-display font-bold tracking-tight mb-3">
-            Our Five Core Values
-          </h2>
-          <p className="text-sm text-neutral-400 max-w-xl">
-            Every client brief and regional campaign is governed by Innovative, Dependable, Ethical, Accountable, and Leadership standards.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-7">
-          {CORE_VALUES.map((val) => (
-            <div
-              key={val.id}
-              className="py-6 border-t border-white/20 space-y-3"
-            >
-              <div className="font-mono text-xs font-bold text-[#FF1A1F] tabular-nums">
-                {val.letter} · {val.index}
-              </div>
-              <h3 className="text-lg font-display font-bold text-white">{val.title}</h3>
-              <p className="text-xs text-neutral-300 leading-relaxed">{val.detail}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Active Regional Footprint & Optional Team Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 space-y-16">
-        {teamMembers.length > 0 && (
-          <div id="team" className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <div>
-                <h2 className="text-3xl font-display font-bold tracking-tight mb-2">
-                  Our Leadership &amp; Team
-                </h2>
-                <p className="text-sm text-neutral-400">
-                  Multidisciplinary strategists, designers, creators, and activation leads in Nairobi.
-                </p>
-              </div>
               <button
                 type="button"
-                onClick={() => onNavigate('/ecosystem')}
-                className="inline-flex items-center gap-2 text-sm font-bold text-[#FF1A1F] hover:text-white transition-colors"
+                onClick={onOpenInquiry}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-white hover:text-white/80 transition-colors"
               >
-                <span>Explore integrated practice</span>
-                <ArrowRight className="w-4 h-4 text-[#FF1A1F]" aria-hidden="true" />
+                <span>{t.nav.letsTalk}</span>
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
+          </Reveal>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {teamMembers.map((member) => (
-                <article
-                  key={member.id}
-                  className="group flex flex-col bg-[#141418] border border-white/10 rounded-2xl overflow-hidden"
+          <Reveal
+            variant="slide-down"
+            delayMs={90}
+            className="lg:col-span-6 aspect-[3/2] overflow-hidden rounded-xl border border-white/25 bg-[#1A0809] shadow-[0_20px_50px_rgba(0,0,0,0.22)]"
+          >
+            <OptimizedImage
+              src={PAGE_HERO_IMAGES.aboutWhoWeAre}
+              alt="Exponential Media Africa executive holding recognition award in front of the Nairobi headquarters reception sign"
+              width={526}
+              height={351}
+              containerClassName="w-full h-full bg-[#1A0809]"
+              className="w-full h-full object-cover object-top"
+            />
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="bg-white text-[#2A1214] py-18 md:py-22">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
+            <Reveal variant="slide-left" className="space-y-3 rounded-2xl bg-[#FAF5F5] p-8 border border-[#B81118]/10">
+              <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-[#B81118]">
+                {t.about.ourVision}
+              </h2>
+              <p className="text-base sm:text-lg text-[#4A2527] leading-relaxed">
+                {t.about.visionBody}
+              </p>
+            </Reveal>
+            <Reveal variant="slide-down" delayMs={90} className="space-y-3 rounded-2xl bg-[#FAF5F5] p-8 border border-[#B81118]/10">
+              <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-[#B81118]">
+                {t.about.ourMission}
+              </h2>
+              <p className="text-base sm:text-lg text-[#4A2527] leading-relaxed">
+                {t.about.missionBody}
+              </p>
+            </Reveal>
+          </div>
+
+          <Reveal variant="slide-left" delayMs={120} className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => onNavigate('/work')}
+              className="inline-flex items-center gap-2 px-5 py-3 text-sm font-bold bg-[#ED1B24] hover:bg-[#B81118] text-white rounded-md transition-colors"
+            >
+              <span>{t.about.exploreWorkCta}</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={onOpenInquiry}
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-[#B81118] hover:text-[#ED1B24] transition-colors"
+            >
+              <span>{t.nav.letsTalk}</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="bg-[#B81118] text-white py-18 md:py-22">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+            <Reveal variant="slide-left" className="lg:col-span-5 space-y-4">
+              <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-white [text-wrap:balance]">
+                {t.about.coreValues}
+              </h2>
+              <p className="text-base sm:text-lg text-white/90 leading-relaxed">
+                {t.about.coreValuesIntro}
+              </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={onOpenInquiry}
+                  className="inline-flex items-center gap-2 px-5 py-3 text-sm font-bold bg-white hover:bg-white/90 text-[#9E0E15] rounded-md transition-colors"
                 >
-                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#0B0B0D]">
-                    <OptimizedImage
-                      src={member.photoUrl || HERO_POSTER_IMAGE}
-                      alt={`${member.name} — ${member.role}`}
-                      width={600}
-                      height={800}
-                      containerClassName="w-full h-full"
-                      className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
-                    />
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col justify-between gap-4">
-                    <div>
-                      <div className="text-xs font-bold text-[#FF1A1F] mb-1">{member.role}</div>
-                      <h3 className="text-xl font-display font-bold text-white mb-1">{member.name}</h3>
-                      <div className="text-xs text-neutral-400">{member.division}</div>
-                    </div>
-                    <p className="text-sm text-neutral-300 leading-relaxed pt-3 border-t border-white/10">
-                      {member.bio}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <div className="mb-8">
-            <p className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#FF1A1F] mb-2">
-              <span className="w-4 h-0.5 bg-[#ED2126]" aria-hidden="true" />
-              <span>Geographic Coverage</span>
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-display font-bold text-white">
-              Five Active African Markets
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {TERRITORY_MARKETS.map((market) => (
-              <div
-                key={market.country}
-                className="p-5 bg-[#141418] border border-white/10 rounded-xl space-y-1.5"
-              >
-                <div className="text-base font-display font-bold text-white">{market.country}</div>
-                <div className="text-xs font-semibold text-[#FF1A1F]">{market.role}</div>
-                <p className="text-xs text-neutral-400 leading-relaxed">{market.notes}</p>
+                  <span>{t.about.startProject}</span>
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                </button>
               </div>
+            </Reveal>
+
+            <Reveal variant="slide-down" delayMs={90} className="lg:col-span-7 space-y-6">
+              <div className="flex flex-wrap gap-3" role="tablist" aria-label={t.about.coreValues}>
+                {CORE_VALUES.map((rawVal) => {
+                  const val = localizeValue(rawVal);
+                  const active = val.id === selectedValue.id;
+                  return (
+                    <button
+                      key={val.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setActiveValueId(val.id)}
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm transition-colors ${
+                        active
+                          ? 'bg-white text-[#9E0E15] font-bold'
+                          : 'bg-[#9E0E15]/70 text-white/85 hover:text-white hover:bg-[#9E0E15] font-medium'
+                      }`}
+                    >
+                      <span className="font-bold">{rawVal.letter}</span>
+                      <span>·</span>
+                      <span>{val.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                key={selectedValue.id}
+                className="route-enter rounded-2xl bg-[#9E0E15]/60 border border-white/15 p-6 sm:p-8 space-y-2"
+              >
+                <h3 className="text-2xl sm:text-3xl font-display font-bold text-white">
+                  {selectedValue.title}
+                </h3>
+                <p className="text-base sm:text-lg font-medium text-white leading-relaxed">
+                  {selectedValue.summary}
+                </p>
+                <p className="text-sm sm:text-base text-white/90 leading-relaxed">
+                  {selectedValue.detail}
+                </p>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white text-[#2A1214] py-18 md:py-22">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <Reveal variant="slide-left">
+              <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-[#B81118]">
+                {t.about.ourMarkets}
+              </h2>
+            </Reveal>
+            <Reveal variant="slide-down" delayMs={80}>
+              <button
+                type="button"
+                onClick={onOpenInquiry}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-[#ED1B24] hover:bg-[#B81118] text-white rounded-md transition-colors whitespace-nowrap"
+              >
+                <span>{t.about.discussMarketCta}</span>
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </Reveal>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            {TERRITORY_MARKETS.map((rawMarket, idx) => {
+              const market = localizeMarket(rawMarket);
+              return (
+                <Reveal
+                  key={rawMarket.country}
+                  variant={idx % 2 === 0 ? 'slide-left' : 'slide-down'}
+                  delayMs={idx * 70}
+                >
+                  <div className="space-y-1.5 rounded-xl bg-[#FAF5F5] p-5 h-full border border-[#B81118]/10">
+                    <h3 className="text-lg font-display font-bold text-[#B81118]">{market.country}</h3>
+                    <div className="text-xs font-bold text-[#2A1214]">{market.role}</div>
+                    <p className="text-sm text-[#4A2527] leading-relaxed">{market.notes}</p>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section id="team" className="bg-[#B81118] text-white py-18 md:py-22">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+            <Reveal variant="slide-left" className="max-w-2xl space-y-3">
+              <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-white">
+                {t.about.ourTeam}
+              </h2>
+              <p className="text-base sm:text-lg text-white/95 leading-relaxed">
+                {t.about.ourTeamIntro}
+              </p>
+            </Reveal>
+            <Reveal variant="slide-down" delayMs={80} className="flex flex-wrap items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => onNavigate('/team')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-white hover:bg-white/90 text-[#9E0E15] rounded-md transition-colors whitespace-nowrap"
+              >
+                <span>{t.about.meetTeamCta}</span>
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </Reveal>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {teamSlots.map((member, idx) => (
+              <Reveal
+                key={member.id}
+                variant={idx % 2 === 0 ? 'slide-left' : 'slide-down'}
+                delayMs={idx * 75}
+              >
+                <article className="flex flex-col transition-transform duration-300 hover:-translate-y-1">
+                  <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg mb-4 bg-[#9E0E15] border border-white/20 flex flex-col items-center justify-center">
+                    {member.photoUrl ? (
+                      <OptimizedImage
+                        src={member.photoUrl}
+                        alt={`${member.name} — ${member.role}`}
+                        width={600}
+                        height={800}
+                        containerClassName="w-full h-full"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-3 text-white/90 px-6 text-center">
+                        <User className="w-12 h-12 stroke-[1.25]" aria-hidden="true" />
+                        <span className="text-xs font-semibold tracking-wide uppercase">
+                          {member.division}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs font-bold text-white/85 mb-0.5">{member.role}</div>
+                  <h3 className="text-xl font-display font-bold text-white mb-1">
+                    {member.name}
+                  </h3>
+                  <p className="text-sm text-white/90 leading-relaxed line-clamp-3">{member.bio}</p>
+                </article>
+              </Reveal>
             ))}
           </div>
         </div>
+      </section>
 
-        <div className="p-8 sm:p-10 bg-[#141418] border border-white/15 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div>
-            <h3 className="text-2xl font-display font-bold text-white mb-2">
-              Ready to partner with our team?
-            </h3>
-            <p className="text-sm text-neutral-300">
-              Schedule a discovery conversation with our Nairobi strategy and creative leads.
-            </p>
+      <section className="bg-white text-[#2A1214] pt-16 pb-10 md:pt-20 md:pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <Reveal variant="slide-left" className="max-w-2xl space-y-3">
+              <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-[#B81118]">
+                {t.about.whyChooseUs}
+              </h2>
+              <p className="text-base sm:text-lg text-[#4A2527] leading-relaxed">
+                {t.about.whyChooseUsIntro}
+              </p>
+            </Reveal>
+
+            <Reveal variant="slide-down" delayMs={80} className="flex flex-wrap items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => onNavigate('/services')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-[#ED1B24] hover:bg-[#B81118] text-white rounded-md transition-colors whitespace-nowrap"
+              >
+                <span>{t.about.exploreSixServices}</span>
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </Reveal>
           </div>
-          <button
-            type="button"
-            onClick={onOpenInquiry}
-            className="px-6 py-3 text-sm font-semibold bg-[#ED2126] hover:bg-[#D1191E] text-white rounded-lg transition-colors whitespace-nowrap shrink-0"
-          >
-            Start a Project
-          </button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {t.about.whyReasons.map((reason, idx) => (
+              <Reveal
+                key={reason.title}
+                variant={idx % 2 === 0 ? 'slide-left' : 'slide-down'}
+                delayMs={idx * 75}
+              >
+                <div className="space-y-2 rounded-xl bg-[#FAF5F5] p-6 h-full border border-[#B81118]/10">
+                  <h3 className="text-lg font-display font-bold text-[#B81118]">{reason.title}</h3>
+                  <p className="text-sm sm:text-base text-[#4A2527] leading-relaxed">
+                    {reason.detail}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal variant="slide-left" delayMs={100} className="pt-1 flex flex-wrap gap-x-6 gap-y-2">
+            {CORE_SIX_SERVICES.map((srv) => {
+              const slug = getServiceSlug(srv);
+              return (
+                <button
+                  key={slug}
+                  type="button"
+                  onClick={() => onNavigate(`/services/${slug}`)}
+                  className="text-xs sm:text-sm font-semibold text-[#B81118] hover:text-[#ED1B24] transition-colors"
+                >
+                  {localizeServiceBySlug(slug, srv)}
+                </button>
+              );
+            })}
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="bg-[#B81118] text-white py-18 md:py-22">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <WorldwidePartnersMarquee logos={clientLogos} surface="red" />
+        </div>
+      </section>
+
+      <section className="bg-white text-[#2A1214] py-14 md:py-18">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <Reveal variant="slide-left">
+            <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-[#B81118] mb-2">
+              {t.about.partnerHeading}
+            </h2>
+            <p className="text-base sm:text-lg text-[#4A2527] leading-relaxed">
+              {t.about.partnerBody}
+            </p>
+          </Reveal>
+          <Reveal variant="slide-down" delayMs={80}>
+            <button
+              type="button"
+              onClick={onOpenInquiry}
+              className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-bold bg-[#ED1B24] hover:bg-[#B81118] text-white rounded-md transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap shrink-0"
+            >
+              <span>{t.about.startProject}</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </Reveal>
         </div>
       </section>
     </div>
