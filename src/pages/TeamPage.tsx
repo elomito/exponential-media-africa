@@ -268,6 +268,30 @@ export function TeamPage({ onOpenInquiry }: TeamPageProps) {
         </div>
       </section>
 
+      <section className="bg-[#B81118] text-white py-20 md:py-24 border-t border-white/15">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <Reveal variant="slide-down">
+            <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-white [text-wrap:balance] mb-5">
+              {t.team.collaborateHeading}
+            </h2>
+          </Reveal>
+          <Reveal variant="slide-left" delayMs={80}>
+            <p className="text-base sm:text-lg text-white/90 max-w-xl mx-auto leading-relaxed mb-8">
+              {t.home.finalCtaBody}
+            </p>
+          </Reveal>
+          <Reveal variant="pop" delayMs={150}>
+            <button
+              type="button"
+              onClick={onOpenInquiry}
+              className="inline-flex items-center gap-2.5 px-8 py-4 text-sm font-bold bg-white hover:bg-white/90 text-[#9E0E15] rounded-md transition-all duration-300 hover:-translate-y-0.5 shadow-sm"
+            >
+              <span>{t.home.startProjectCta}</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </Reveal>
+        </div>
+      </section>
     </div>
   );
 }

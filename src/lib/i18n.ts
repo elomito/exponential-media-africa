@@ -261,6 +261,7 @@ export interface UiStrings {
   team: {
     heroTitle: string;
     heroSubtitle: string;
+    collaborateHeading: string;
     fourPillarsHeading: string;
     exploreServices: string;
     viewPrefix: string;
@@ -745,6 +746,7 @@ export const EN_STRINGS: UiStrings = {
     heroTitle: 'Our Team.',
     heroSubtitle:
       'Executive leadership, human resources, finance, and campaign specialists collaborating from A3-10 Casamia, Ngong Road, Kilimani.',
+    collaborateHeading: 'COLLABORATE WITH OUR TEAM',
     fourPillarsHeading: 'Four Pillars as One Team.',
     exploreServices: 'Explore Services',
     viewPrefix: 'View',
@@ -1251,6 +1253,7 @@ export const SW_STRINGS: UiStrings = {
     heroTitle: 'Timu Yetu.',
     heroSubtitle:
       'Uongozi mkuu, rasilimali watu, fedha, na wataalamu wa kampeni wakishirikiana kutoka A3-10 Casamia, Barabara ya Ngong, Kilimani.',
+    collaborateHeading: 'SHIRIKIANI NA TIMU YETU',
     fourPillarsHeading: 'Nguzo Nne Kama Timu Moja.',
     exploreServices: 'Tazama Huduma',
     viewPrefix: 'Tazama',
