@@ -4,6 +4,7 @@ import { interpolateDisplayCountValue, parseCountDisplay } from '../lib/motion';
 interface LiveCounterProps {
   value: string;
   durationMs?: number;
+  repeatDelayMs?: number;
   replayTrigger?: number;
   className?: string;
 }
@@ -11,6 +12,7 @@ interface LiveCounterProps {
 export function LiveCounter({
   value,
   durationMs = 1500,
+  repeatDelayMs = 0,
   replayTrigger = 0,
   className = '',
 }: LiveCounterProps) {
@@ -51,6 +53,7 @@ export function LiveCounter({
     }
 
     let rafId = 0;
+    let repeatTimeoutId = 0;
     let started = false;
     let observer: IntersectionObserver | undefined;
     let scrollListening = false;
@@ -64,10 +67,7 @@ export function LiveCounter({
       }
     };
 
-    const startCountAnimation = () => {
-      if (started) return;
-      started = true;
-      cleanupTriggers();
+    const runCountAnimation = () => {
       setHasCounted(false);
       setDisplayText(`${prefix}0${suffix}`);
 
@@ -81,10 +81,20 @@ export function LiveCounter({
         } else {
           setDisplayText(`${prefix}${target}${suffix}`);
           setHasCounted(true);
+          if (repeatDelayMs > 0) {
+            repeatTimeoutId = window.setTimeout(runCountAnimation, repeatDelayMs);
+          }
         }
       };
 
       rafId = window.requestAnimationFrame(step);
+    };
+
+    const startCountAnimation = () => {
+      if (started) return;
+      started = true;
+      cleanupTriggers();
+      runCountAnimation();
     };
 
     const isInViewport = () => {
@@ -92,18 +102,22 @@ export function LiveCounter({
       return rect.top <= window.innerHeight * 0.94 && rect.bottom >= 0;
     };
 
-    if (replayTrigger > 0 || isInViewport()) {
-      startCountAnimation();
-      return () => {
-        if (rafId) window.cancelAnimationFrame(rafId);
-      };
-    }
-
     const onScrollCheck = () => {
       if (isInViewport()) {
         startCountAnimation();
       }
     };
+
+    const cleanupAnimation = () => {
+      cleanupTriggers();
+      if (rafId) window.cancelAnimationFrame(rafId);
+      if (repeatTimeoutId) window.clearTimeout(repeatTimeoutId);
+    };
+
+    if (replayTrigger > 0 || isInViewport()) {
+      startCountAnimation();
+      return cleanupAnimation;
+    }
 
     if (typeof IntersectionObserver !== 'undefined') {
       observer = new IntersectionObserver(
@@ -127,11 +141,8 @@ export function LiveCounter({
     window.addEventListener('resize', onScrollCheck, { passive: true });
     scrollListening = true;
 
-    return () => {
-      cleanupTriggers();
-      if (rafId) window.cancelAnimationFrame(rafId);
-    };
-  }, [target, prefix, suffix, value, durationMs, replayTrigger]);
+    return cleanupAnimation;
+  }, [target, prefix, suffix, value, durationMs, repeatDelayMs, replayTrigger]);
 
   return (
     <span

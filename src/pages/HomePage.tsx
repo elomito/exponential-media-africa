@@ -295,7 +295,13 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
         </div>
       </section>
 
-      <section className="bg-white text-[#2A1214] py-16 md:py-22">
+      <section
+        className="bg-white text-[#2A1214] py-16 md:py-22"
+        style={{
+          backgroundImage:
+            'linear-gradient(110deg, rgba(0, 0, 0, 0.10), transparent 52%)',
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
             <Reveal variant="slide-left" className="lg:col-span-5">
@@ -343,7 +349,12 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
                         {metric.label}
                       </div>
                       <div className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-[#B81118] group-hover:text-[#ED1B24] transition-colors tabular-nums">
-                        <LiveCounter value={metric.value} durationMs={1600} replayTrigger={replayCount} />
+                        <LiveCounter
+                          value={metric.value}
+                          durationMs={1600}
+                          repeatDelayMs={5000}
+                          replayTrigger={replayCount}
+                        />
                       </div>
                     </button>
                   </Reveal>

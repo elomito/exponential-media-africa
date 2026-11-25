@@ -16,9 +16,8 @@ export interface UiStrings {
   footer: {
     servicesTitle: string;
     exploreTitle: string;
-    focusTitle: string;
+    contactTitle: string;
     focusBody: string;
-    directBriefDesk: string;
     whatsappCta: string;
     bioSuffix: string;
     privacy: string;
@@ -383,10 +382,9 @@ export const EN_STRINGS: UiStrings = {
   footer: {
     servicesTitle: 'Services',
     exploreTitle: 'Explore',
-    focusTitle: 'Our Agency Focus',
+    contactTitle: 'Contact Us',
     focusBody:
       'Dedicated exclusively to Social Media Management, Content Creation & Marketing, Influencer Marketing, Media Buying, Brand Activation, and Visual Design.',
-    directBriefDesk: 'Direct brief desk:',
     whatsappCta: 'Chat on WhatsApp',
     bioSuffix:
       'Helping brands stand out in the digital age across Kenya, Uganda, Rwanda, the Democratic Republic of Congo, and Zambia.',
@@ -890,10 +888,9 @@ export const SW_STRINGS: UiStrings = {
   footer: {
     servicesTitle: 'Huduma Zetu',
     exploreTitle: 'Kurasa Zetu',
-    focusTitle: 'Mwelekeo Wetu',
+    contactTitle: 'Wasiliana Nasi',
     focusBody:
       'Tunajikita pekee katika Usimamizi wa Mitandao ya Kijamii, Uundaji wa Maudhui na Masoko, Masoko Kupitia Washawishi, Ununuzi wa Nafasi za Matangazo, Uhamasishaji wa Chapa, na Usanifu wa Taswira.',
-    directBriefDesk: 'Dawati la miradi:',
     whatsappCta: 'Zungumza nasi WhatsApp',
     bioSuffix:
       'Tunasaidia chapa kujitokeza katika enzi ya kidijitali kote Kenya, Uganda, Rwanda, Jamhuri ya Kidemokrasia ya Kongo, na Zambia.',

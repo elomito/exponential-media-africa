@@ -3,7 +3,6 @@ import { BrandLogo } from './BrandLogo';
 import { Reveal } from './ScrollReveal';
 import { useCms } from '../context/CmsContext';
 import { useLanguage } from '../context/LanguageContext';
-import { VERIFIED_CONTACT } from '../data/seedData';
 import { CORE_SERVICE_ROUTES } from '../lib/portfolio';
 import { sanitizeMailtoHref, sanitizeTelHref } from '../lib/validation';
 
@@ -36,40 +35,6 @@ export function Footer({ onNavigate }: FooterProps) {
             <p className="text-base sm:text-lg leading-relaxed text-white/90 max-w-sm">
               {localizedTagline} {t.footer.bioSuffix}
             </p>
-            <div className="space-y-2.5 text-base">
-              <div className="flex items-start gap-2.5 text-white/90">
-                <MapPin className="w-4 h-4 text-white shrink-0 mt-1" aria-hidden="true" />
-                <span>{settings.headquartersAddress}</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-white/90">
-                <Mail className="w-4 h-4 text-white shrink-0" aria-hidden="true" />
-                <a href={sanitizeMailtoHref(settings.email)} className="hover:opacity-80 transition-opacity">
-                  {settings.email}
-                </a>
-              </div>
-              <div className="flex items-center gap-2.5 text-white/90">
-                <Phone className="w-4 h-4 text-white shrink-0" aria-hidden="true" />
-                <span className="flex flex-wrap gap-x-2">
-                  <a
-                    href={sanitizeTelHref(settings.primaryPhone)}
-                    className="hover:opacity-80 transition-opacity"
-                  >
-                    {settings.primaryPhone}
-                  </a>
-                  {settings.secondaryPhone && (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <a
-                        href={sanitizeTelHref(settings.secondaryPhone)}
-                        className="hover:opacity-80 transition-opacity"
-                      >
-                        {settings.secondaryPhone}
-                      </a>
-                    </>
-                  )}
-                </span>
-              </div>
-            </div>
           </Reveal>
 
           <Reveal variant="slide-down" delayMs={70} className="lg:col-span-3 space-y-4">
@@ -125,20 +90,42 @@ export function Footer({ onNavigate }: FooterProps) {
 
           <Reveal variant="slide-left" delayMs={150} className="lg:col-span-3 space-y-4">
             <h3 className="text-base font-bold uppercase text-white tracking-tight">
-              {t.footer.focusTitle}
+              {t.footer.contactTitle}
             </h3>
-            <p className="text-base sm:text-lg text-white/85 leading-relaxed">
-              {t.footer.focusBody}
-            </p>
-            <p className="text-base text-white/85">
-              {t.footer.directBriefDesk}{' '}
-              <a
-                href={sanitizeMailtoHref(VERIFIED_CONTACT.email)}
-                className="font-semibold text-white hover:opacity-80"
-              >
-                {VERIFIED_CONTACT.email}
-              </a>
-            </p>
+            <div className="space-y-3 text-base text-white/90">
+              <div className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-white shrink-0 mt-1" aria-hidden="true" />
+                <span>{settings.headquartersAddress}</span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Mail className="w-4 h-4 text-white shrink-0 mt-1" aria-hidden="true" />
+                <a
+                  href={sanitizeMailtoHref(settings.email)}
+                  className="hover:opacity-80 transition-opacity"
+                >
+                  {settings.email}
+                </a>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Phone className="w-4 h-4 text-white shrink-0 mt-1" aria-hidden="true" />
+                <span className="flex flex-col gap-1">
+                  <a
+                    href={sanitizeTelHref(settings.primaryPhone)}
+                    className="hover:opacity-80 transition-opacity"
+                  >
+                    {settings.primaryPhone}
+                  </a>
+                  {settings.secondaryPhone && (
+                    <a
+                      href={sanitizeTelHref(settings.secondaryPhone)}
+                      className="hover:opacity-80 transition-opacity"
+                    >
+                      {settings.secondaryPhone}
+                    </a>
+                  )}
+                </span>
+              </div>
+            </div>
           </Reveal>
         </div>
 
