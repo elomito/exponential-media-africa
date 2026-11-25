@@ -5,7 +5,7 @@ import { Reveal } from '../components/ScrollReveal';
 import { SeoHead } from '../components/SeoHead';
 import { useCms } from '../context/CmsContext';
 import { useLanguage } from '../context/LanguageContext';
-import { EXECUTIVE_DIRECTOR_PORTRAIT, PAGE_HERO_IMAGES } from '../data/pageHeroes';
+import { PAGE_HERO_IMAGES } from '../data/pageHeroes';
 import { CORE_VALUES, DIVISIONS } from '../data/seedData';
 import { getServiceSlug } from '../lib/portfolio';
 
@@ -23,35 +23,107 @@ interface TeamSlot {
   photoUrl?: string;
 }
 
+const DUNCAN_TEAM_PORTRAIT = '/assets/profile/team/duncan-aboka.jpg';
+
 const DEFAULT_TEAM_SLOTS: TeamSlot[] = [
   {
     id: 'exec-duncan-aboka',
     name: 'Duncan Aboka',
-    role: 'Executive Director',
+    role: 'Managing Director',
     division: 'Executive Leadership',
-    bio: 'Provides strategic direction, client partnerships, and regional agency oversight from our Kilimani, Nairobi headquarters.',
-    photoUrl: EXECUTIVE_DIRECTOR_PORTRAIT,
+    bio: '',
+    photoUrl: DUNCAN_TEAM_PORTRAIT,
   },
   {
-    id: 'dept-hr',
-    name: 'Human Resources',
-    role: 'People & Culture',
-    division: 'Human Resources',
-    bio: 'Leads talent acquisition, multidisciplinary team development, and agency culture across our six core practices.',
+    id: 'sam-osewe',
+    name: 'Sam Osewe',
+    role: 'Regional Director Operations',
+    division: 'Operations',
+    bio: '',
   },
   {
-    id: 'dept-finance',
-    name: 'Finance',
-    role: 'Finance & Administration',
-    division: 'Finance Department',
-    bio: 'Oversees commercial budgeting, client billing governance, vendor settlements, and regional operational compliance.',
+    id: 'ann-glory-wambui',
+    name: 'Ann Glory Wambui',
+    role: 'Account Manager',
+    division: 'Client Services',
+    bio: '',
   },
   {
-    id: 'dept-creative-delivery',
-    name: 'Creative & Campaign Lead',
-    role: 'Design, Content & Activations',
-    division: 'Campaign Operations',
-    bio: 'Coordinates visual design, content creation, social management, creator campaigns, media buying, and brand activations.',
+    id: 'sharon-odeko',
+    name: 'Sharon Odeko',
+    role: 'Business Operations Lead',
+    division: 'Operations',
+    bio: '',
+  },
+  {
+    id: 'chris-ontita',
+    name: 'Chris Ontita',
+    role: 'Finance Officer',
+    division: 'Finance',
+    bio: '',
+  },
+  {
+    id: 'billy-marande',
+    name: 'Billy Marande',
+    role: 'Digital Marketing Project Manager',
+    division: 'Digital Marketing',
+    bio: '',
+  },
+  {
+    id: 'aurelia-muhanji',
+    name: 'Aurelia Muhanji',
+    role: 'Digital Marketing Associate',
+    division: 'Digital Marketing',
+    bio: '',
+  },
+  {
+    id: 'abraham-wanyonyi',
+    name: 'Abraham Wanyonyi',
+    role: 'Media Buy',
+    division: 'Media Buying',
+    bio: '',
+  },
+  {
+    id: 'treza-achieng-ouma',
+    name: 'Treza Achieng Ouma',
+    role: 'Business Development Representative',
+    division: 'Business Development',
+    bio: '',
+  },
+  {
+    id: 'tuiza-amondi-ongodo',
+    name: 'Tuiza Amondi Ongodo',
+    role: 'Business Development Representative',
+    division: 'Business Development',
+    bio: '',
+  },
+  {
+    id: 'maxwell-simba',
+    name: 'Maxwell Simba',
+    role: 'Visual Content Creator',
+    division: 'Creative',
+    bio: '',
+  },
+  {
+    id: 'irene-odhiambo',
+    name: 'Irene Odhiambo',
+    role: 'Digital Marketing Associate',
+    division: 'Digital Marketing',
+    bio: '',
+  },
+  {
+    id: 'timothy-wachira',
+    name: 'Timothy Wachira',
+    role: 'Digital Marketing Associate',
+    division: 'Digital Marketing',
+    bio: '',
+  },
+  {
+    id: 'paul-jakoyo',
+    name: 'Paul Jakoyo',
+    role: 'On ground Project Manager',
+    division: 'Project Operations',
+    bio: '',
   },
 ];
 
@@ -59,36 +131,21 @@ export function TeamPage({ onNavigate, onOpenInquiry }: TeamPageProps) {
   const { teamMembers } = useCms();
   const { t, localizeTeamSlot, localizeDivision, localizeValue } = useLanguage();
 
-  const teamSlots: TeamSlot[] = (
-    teamMembers.length > 0
-      ? [
-          ...teamMembers.map((m) => {
-            const defaultSlot = DEFAULT_TEAM_SLOTS.find(
-              (slot) =>
-                slot.id === m.id ||
-                slot.name.toLowerCase() === m.name.toLowerCase() ||
-                slot.role.toLowerCase() === m.role.toLowerCase()
-            );
-            return {
-              id: m.id,
-              name: m.name,
-              role: m.role,
-              division: m.division,
-              bio: m.bio,
-              photoUrl: m.photoUrl || defaultSlot?.photoUrl,
-            };
-          }),
-          ...DEFAULT_TEAM_SLOTS.filter(
-            (slot) =>
-              !teamMembers.some(
-                (m) =>
-                  m.name.toLowerCase() === slot.name.toLowerCase() ||
-                  m.role.toLowerCase() === slot.role.toLowerCase()
-              )
-          ),
-        ].slice(0, 4)
-      : DEFAULT_TEAM_SLOTS
-  ).map(localizeTeamSlot);
+  const teamSlots: TeamSlot[] = DEFAULT_TEAM_SLOTS.map((slot) => {
+    const cmsMember = teamMembers.find(
+      (member) =>
+        member.id === slot.id ||
+        member.name.trim().toLowerCase() === slot.name.toLowerCase()
+    );
+
+    return localizeTeamSlot({
+      ...slot,
+      photoUrl:
+        slot.id === 'exec-duncan-aboka'
+          ? slot.photoUrl
+          : cmsMember?.photoUrl || slot.photoUrl,
+    });
+  });
 
   const heroWords = t.team.heroTitle.trim().split(/\s+/);
   const splitIdx = Math.max(1, heroWords.length - 1);
@@ -167,47 +224,36 @@ export function TeamPage({ onNavigate, onOpenInquiry }: TeamPageProps) {
         </div>
       </section>
 
-      <section className="bg-[#B81118] text-white py-20 md:py-24">
+      <section className="bg-[#B81118] text-white py-12 md:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <h2 className="sr-only text-2xl sm:text-4xl">{t.team.heroTitle}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {teamSlots.map((member, index) => (
               <Reveal
                 key={member.id}
                 variant={index % 2 === 0 ? 'slide-left' : 'slide-down'}
-                delayMs={index * 65}
-                className="flex flex-col"
+                delayMs={index * 35}
               >
-                <article className="flex flex-col h-full">
-                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#9E0E15] border border-white/20 flex flex-col items-center justify-center mb-5">
-                    {'photoUrl' in member && member.photoUrl ? (
+                <article className="flex min-h-[76px] items-center gap-3 rounded-lg border border-white/20 bg-white/5 px-3 py-3 transition-colors hover:bg-white/10 sm:gap-4 sm:px-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-[#B81118] ring-2 ring-white/70">
+                    {member.photoUrl ? (
                       <OptimizedImage
                         src={member.photoUrl}
                         alt={`${member.name} — ${member.role}`}
-                        width={600}
-                        height={800}
+                        width={96}
+                        height={96}
                         containerClassName="w-full h-full"
                         className="w-full h-full object-cover object-top"
                       />
                     ) : (
-                      <div className="flex flex-col items-center justify-center gap-3 text-white px-6 text-center">
-                        <User className="w-14 h-14 stroke-[1.25]" aria-hidden="true" />
-                        <span className="text-sm font-semibold tracking-wide uppercase">
-                          {member.division}
-                        </span>
-                      </div>
+                      <User className="h-5 w-5 stroke-[1.75]" aria-hidden="true" />
                     )}
                   </div>
-                  <div className="flex-1 flex flex-col justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-bold text-white/90 mb-1">
-                        {member.role}
-                      </div>
-                      <h2 className="text-2xl font-display font-bold text-white tracking-tight mb-1">
-                        {member.name}
-                      </h2>
-                      <div className="text-sm text-white/80">{member.division}</div>
-                    </div>
-                    <p className="text-base sm:text-lg text-white/90 leading-relaxed">{member.bio}</p>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-display font-bold text-white tracking-tight">
+                      {member.name}
+                    </h3>
+                    <p className="text-sm text-white/80 leading-snug">{member.role}</p>
                   </div>
                 </article>
               </Reveal>
