@@ -5,9 +5,7 @@ import { Reveal } from '../components/ScrollReveal';
 import { SeoHead } from '../components/SeoHead';
 import { useCms } from '../context/CmsContext';
 import { useLanguage } from '../context/LanguageContext';
-import { PAGE_HERO_IMAGES } from '../data/pageHeroes';
-import { CORE_VALUES, DIVISIONS } from '../data/seedData';
-import { getServiceSlug } from '../lib/portfolio';
+import { EXECUTIVE_DIRECTOR_PORTRAIT, PAGE_HERO_IMAGES } from '../data/pageHeroes';
 
 interface TeamPageProps {
   onNavigate: (path: string) => void;
@@ -23,113 +21,111 @@ interface TeamSlot {
   photoUrl?: string;
 }
 
-const DUNCAN_TEAM_PORTRAIT = '/assets/profile/team/duncan-aboka.jpg';
-
 const DEFAULT_TEAM_SLOTS: TeamSlot[] = [
   {
     id: 'exec-duncan-aboka',
     name: 'Duncan Aboka',
     role: 'Managing Director',
     division: 'Executive Leadership',
-    bio: '',
-    photoUrl: DUNCAN_TEAM_PORTRAIT,
+    bio: 'Leads agency strategy and client partnerships, aligning teams and resources to deliver projects from brief through execution.',
+    photoUrl: EXECUTIVE_DIRECTOR_PORTRAIT,
   },
   {
     id: 'sam-osewe',
     name: 'Sam Osewe',
     role: 'Regional Director Operations',
     division: 'Operations',
-    bio: '',
+    bio: 'Leads regional operations, coordinating people, timelines, and resources so client projects move smoothly from brief to delivery.',
   },
   {
     id: 'ann-glory-wambui',
     name: 'Ann Glory Wambui',
     role: 'Account Manager',
     division: 'Client Services',
-    bio: '',
+    bio: 'Manages client communication and account priorities, keeping briefs, approvals, and deliverables aligned with project goals.',
   },
   {
     id: 'sharon-odeko',
     name: 'Sharon Odeko',
     role: 'Business Operations Lead',
     division: 'Operations',
-    bio: '',
+    bio: 'Coordinates business operations and internal processes that keep client projects organized, resourced, and moving on schedule.',
   },
   {
     id: 'chris-ontita',
     name: 'Chris Ontita',
     role: 'Finance Officer',
     division: 'Finance',
-    bio: '',
+    bio: 'Supports project budgeting, financial records, and payment coordination to help teams deliver client work responsibly.',
   },
   {
     id: 'billy-marande',
     name: 'Billy Marande',
     role: 'Digital Marketing Project Manager',
     division: 'Digital Marketing',
-    bio: '',
+    bio: 'Plans and manages digital marketing projects, coordinating campaign schedules and deliverables around client objectives.',
   },
   {
     id: 'aurelia-muhanji',
     name: 'Aurelia Muhanji',
     role: 'Digital Marketing Associate',
     division: 'Digital Marketing',
-    bio: '',
+    bio: 'Supports digital campaign execution through content coordination, platform updates, and day-to-day marketing tasks.',
   },
   {
     id: 'abraham-wanyonyi',
     name: 'Abraham Wanyonyi',
     role: 'Media Buy',
     division: 'Media Buying',
-    bio: '',
+    bio: 'Plans and coordinates media buys to help client campaigns reach target audiences within agreed budgets.',
   },
   {
     id: 'treza-achieng-ouma',
     name: 'Treza Achieng Ouma',
     role: 'Business Development Representative',
     division: 'Business Development',
-    bio: '',
+    bio: 'Builds prospect relationships, understands business needs, and connects potential clients with relevant agency services.',
   },
   {
     id: 'tuiza-amondi-ongodo',
     name: 'Tuiza Amondi Ongodo',
     role: 'Business Development Representative',
     division: 'Business Development',
-    bio: '',
+    bio: 'Develops new business opportunities and helps translate prospective client needs into clear project conversations.',
   },
   {
     id: 'maxwell-simba',
     name: 'Maxwell Simba',
     role: 'Visual Content Creator',
     division: 'Creative',
-    bio: '',
+    bio: 'Creates brand-aligned visual content that supports client storytelling and campaign delivery across digital channels.',
   },
   {
     id: 'irene-odhiambo',
     name: 'Irene Odhiambo',
     role: 'Digital Marketing Associate',
     division: 'Digital Marketing',
-    bio: '',
+    bio: 'Assists with campaign execution, content scheduling, and online audience engagement for client accounts.',
   },
   {
     id: 'timothy-wachira',
     name: 'Timothy Wachira',
     role: 'Digital Marketing Associate',
     division: 'Digital Marketing',
-    bio: '',
+    bio: 'Supports digital marketing activity and campaign coordination to keep work aligned with client goals and calendars.',
   },
   {
     id: 'paul-jakoyo',
     name: 'Paul Jakoyo',
     role: 'On ground Project Manager',
     division: 'Project Operations',
-    bio: '',
+    bio: 'Coordinates on-ground project activity, teams, and logistics to deliver client activations on schedule.',
   },
 ];
 
-export function TeamPage({ onNavigate, onOpenInquiry }: TeamPageProps) {
+export function TeamPage({ onOpenInquiry }: TeamPageProps) {
   const { teamMembers } = useCms();
-  const { t, localizeTeamSlot, localizeDivision, localizeValue } = useLanguage();
+  const { t, localizeTeamSlot } = useLanguage();
 
   const teamSlots: TeamSlot[] = DEFAULT_TEAM_SLOTS.map((slot) => {
     const cmsMember = teamMembers.find(
@@ -254,6 +250,7 @@ export function TeamPage({ onNavigate, onOpenInquiry }: TeamPageProps) {
                       {member.name}
                     </h3>
                     <p className="text-sm text-white/80 leading-snug">{member.role}</p>
+                    <p className="mt-1 text-sm text-white/75 leading-relaxed">{member.bio}</p>
                   </div>
                 </article>
               </Reveal>
@@ -262,99 +259,6 @@ export function TeamPage({ onNavigate, onOpenInquiry }: TeamPageProps) {
         </div>
       </section>
 
-      <section className="bg-white text-[#2A1214] py-20 md:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <Reveal variant="slide-left" className="max-w-2xl">
-              <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-[#B81118] [text-wrap:balance]">
-                {t.team.fourPillarsHeading}
-              </h2>
-            </Reveal>
-            <Reveal variant="slide-down" delayMs={80}>
-              <button
-                type="button"
-                onClick={() => onNavigate('/services')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-[#ED1B24] hover:bg-[#B81118] text-white rounded-lg transition-colors whitespace-nowrap shrink-0"
-              >
-                <span>{t.team.exploreServices}</span>
-                <ArrowRight className="w-4 h-4" aria-hidden="true" />
-              </button>
-            </Reveal>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {DIVISIONS.map((rawDiv, index) => {
-              const div = localizeDivision(rawDiv);
-              return (
-                <Reveal
-                  key={div.id}
-                  variant={index % 2 === 0 ? 'slide-left' : 'slide-down'}
-                  delayMs={index * 65}
-                  className="flex flex-col justify-between gap-4"
-                >
-                  <div>
-                    <h3 className="text-xl font-display font-bold text-[#B81118] mb-2">
-                      {div.name}
-                    </h3>
-                    <p className="text-base sm:text-lg text-[#4A2527] leading-relaxed">
-                      {div.ecosystemRole}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate(`/services/${getServiceSlug(rawDiv.services[0])}`)}
-                    className="inline-flex items-center gap-1.5 text-sm font-bold text-[#B81118] hover:text-[#ED1B24] transition-colors"
-                  >
-                    <span>
-                      {t.team.viewPrefix} {div.shortName}
-                    </span>
-                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-                  </button>
-                </Reveal>
-              );
-            })}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 pt-4">
-            {CORE_VALUES.map((rawVal, index) => {
-              const val = localizeValue(rawVal);
-              return (
-                <Reveal
-                  key={val.id}
-                  variant={index % 2 === 0 ? 'slide-left' : 'slide-down'}
-                  delayMs={index * 55}
-                  className="space-y-1.5"
-                >
-                  <div className="text-base font-display font-bold text-[#B81118]">{val.title}</div>
-                  <p className="text-base text-[#4A2527] leading-relaxed">{val.summary}</p>
-                </Reveal>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#B81118] text-white py-20 md:py-24 border-b border-white/15">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <Reveal variant="slide-left">
-            <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight leading-[1.08] uppercase text-white mb-2">
-              {t.team.workWithUsHeading}
-            </h2>
-            <p className="text-base sm:text-lg text-white/90 leading-relaxed">
-              {t.team.workWithUsBody}
-            </p>
-          </Reveal>
-          <Reveal variant="slide-down" delayMs={80}>
-            <button
-              type="button"
-              onClick={onOpenInquiry}
-              className="px-6 py-3.5 text-sm font-bold bg-white hover:bg-white/90 text-[#9E0E15] rounded-lg transition-colors whitespace-nowrap shrink-0"
-            >
-              {t.team.startProject}
-            </button>
-          </Reveal>
-        </div>
-      </section>
     </div>
   );
 }

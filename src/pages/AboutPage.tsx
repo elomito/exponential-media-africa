@@ -28,31 +28,31 @@ const DEFAULT_LEADERSHIP_SLOTS: LeadershipSlot[] = [
   {
     id: 'exec-duncan-aboka',
     name: 'Duncan Aboka',
-    role: 'Executive Director',
+    role: 'Managing Director',
     division: 'Executive Leadership',
-    bio: 'Provides strategic direction, client partnerships, and regional oversight from Kilimani, Nairobi.',
+    bio: 'Leads agency strategy and client partnerships, aligning teams and resources to deliver projects from brief through execution.',
     photoUrl: EXECUTIVE_DIRECTOR_PORTRAIT,
   },
   {
-    id: 'dept-hr',
-    name: 'Human Resources',
-    role: 'People & Culture',
-    division: 'Human Resources',
-    bio: 'Leads talent acquisition, team development, and agency culture across our six core practices.',
+    id: 'sam-osewe',
+    name: 'Sam Osewe',
+    role: 'Regional Director Operations',
+    division: 'Operations',
+    bio: 'Oversees regional operations, coordinating people, resources, and timelines to keep client projects moving smoothly.',
   },
   {
-    id: 'dept-finance',
-    name: 'Finance',
-    role: 'Finance & Administration',
-    division: 'Finance Department',
-    bio: 'Oversees commercial budgeting, client billing governance, and regional operational compliance.',
+    id: 'ann-glory-wambui',
+    name: 'Ann Glory Wambui',
+    role: 'Account Manager',
+    division: 'Client Services',
+    bio: 'Manages client communication and account priorities, keeping briefs and deliverables aligned with project goals.',
   },
   {
-    id: 'dept-creative-delivery',
-    name: 'Creative & Campaign Lead',
-    role: 'Design, Content & Activations',
-    division: 'Campaign Operations',
-    bio: 'Coordinates visual design, content creation, social media, creator campaigns, media buying, and activations.',
+    id: 'sharon-odeko',
+    name: 'Sharon Odeko',
+    role: 'Business Operations Lead',
+    division: 'Operations',
+    bio: 'Leads business operations and internal coordination, helping teams stay organized and resourced throughout client projects.',
   },
 ];
 
@@ -64,36 +64,21 @@ export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
   const rawSelectedValue = CORE_VALUES.find((v) => v.id === activeValueId) || CORE_VALUES[0];
   const selectedValue = localizeValue(rawSelectedValue);
 
-  const teamSlots: LeadershipSlot[] = (
-    teamMembers.length > 0
-      ? [
-          ...teamMembers.map((m) => {
-            const defaultSlot = DEFAULT_LEADERSHIP_SLOTS.find(
-              (slot) =>
-                slot.id === m.id ||
-                slot.name.toLowerCase() === m.name.toLowerCase() ||
-                slot.role.toLowerCase() === m.role.toLowerCase()
-            );
-            return {
-              id: m.id,
-              name: m.name,
-              role: m.role,
-              division: m.division,
-              bio: m.bio,
-              photoUrl: m.photoUrl || defaultSlot?.photoUrl,
-            };
-          }),
-          ...DEFAULT_LEADERSHIP_SLOTS.filter(
-            (slot) =>
-              !teamMembers.some(
-                (m) =>
-                  m.name.toLowerCase() === slot.name.toLowerCase() ||
-                  m.role.toLowerCase() === slot.role.toLowerCase()
-              )
-          ),
-        ].slice(0, 4)
-      : DEFAULT_LEADERSHIP_SLOTS
-  ).map(localizeTeamSlot);
+  const teamSlots: LeadershipSlot[] = DEFAULT_LEADERSHIP_SLOTS.map((slot) => {
+    const cmsMember = teamMembers.find(
+      (member) =>
+        member.id === slot.id ||
+        member.name.trim().toLowerCase() === slot.name.toLowerCase()
+    );
+
+    return localizeTeamSlot({
+      ...slot,
+      photoUrl:
+        slot.id === 'exec-duncan-aboka'
+          ? slot.photoUrl
+          : cmsMember?.photoUrl || slot.photoUrl,
+    });
+  });
 
   const heroWords = t.about.heroTitle.trim().split(/\s+/);
   const splitIdx = Math.max(1, heroWords.length - 2);

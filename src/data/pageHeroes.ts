@@ -18,4 +18,4 @@ export const PAGE_HERO_IMAGES = {
 } as const;
 
 export const EXECUTIVE_DIRECTOR_PORTRAIT =
-  aboutWhoWeAreExecutiveImg;
+  '/assets/profile/team/duncan-aboka.jpg';
