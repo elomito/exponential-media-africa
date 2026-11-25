@@ -260,7 +260,7 @@ export const SW_TEAM_SLOTS: Record<
     name: 'Duncan Aboka',
     role: 'Mkurugenzi Mtendaji',
     division: 'Uongozi Mkuu',
-    bio: 'Anaongoza mwelekeo wa kimkakati, ushirikiano na wateja, na usimamizi wa kikanda kutoka makao makuu Kilimani, Nairobi.',
+    bio: 'Anaongoza mkakati wa wakala na ushirikiano na wateja, akiunganisha timu na rasilimali kuanzia muhtasari wa mradi hadi utekelezaji. Pia huweka vipaumbele vya kazi na kuhakikisha malengo ya mteja yanaongoza maamuzi ya kila siku ya mradi.',
   },
   'dept-hr': {
     name: 'Rasilimali Watu (HR)',

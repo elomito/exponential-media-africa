@@ -39,6 +39,7 @@ const DEFAULT_LEADERSHIP_SLOTS: LeadershipSlot[] = [
     role: 'Regional Director Operations',
     division: 'Operations',
     bio: 'Oversees regional operations, coordinating people, resources, and timelines to keep client projects moving smoothly.',
+    photoUrl: '/assets/profile/team/sam-osewe.jpg',
   },
   {
     id: 'ann-glory-wambui',
@@ -46,6 +47,7 @@ const DEFAULT_LEADERSHIP_SLOTS: LeadershipSlot[] = [
     role: 'Account Manager',
     division: 'Client Services',
     bio: 'Manages client communication and account priorities, keeping briefs and deliverables aligned with project goals.',
+    photoUrl: '/assets/profile/team/ann-glory-wambui.jpg',
   },
   {
     id: 'sharon-odeko',
@@ -53,6 +55,7 @@ const DEFAULT_LEADERSHIP_SLOTS: LeadershipSlot[] = [
     role: 'Business Operations Lead',
     division: 'Operations',
     bio: 'Leads business operations and internal coordination, helping teams stay organized and resourced throughout client projects.',
+    photoUrl: '/assets/profile/team/sharon-odeko.jpg',
   },
 ];
 
@@ -73,10 +76,7 @@ export function AboutPage({ onNavigate, onOpenInquiry }: AboutPageProps) {
 
     return localizeTeamSlot({
       ...slot,
-      photoUrl:
-        slot.id === 'exec-duncan-aboka'
-          ? slot.photoUrl
-          : cmsMember?.photoUrl || slot.photoUrl,
+      photoUrl: slot.photoUrl || cmsMember?.photoUrl,
     });
   });
 

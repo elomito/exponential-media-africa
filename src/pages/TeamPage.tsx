@@ -27,7 +27,7 @@ const DEFAULT_TEAM_SLOTS: TeamSlot[] = [
     name: 'Duncan Aboka',
     role: 'Managing Director',
     division: 'Executive Leadership',
-    bio: 'Leads agency strategy and client partnerships, aligning teams and resources to deliver projects from brief through execution.',
+    bio: 'Leads agency strategy and client partnerships, aligning teams and resources from brief through execution. Sets delivery priorities and keeps client objectives connected to day-to-day project decisions.',
     photoUrl: EXECUTIVE_DIRECTOR_PORTRAIT,
   },
   {
@@ -35,91 +35,103 @@ const DEFAULT_TEAM_SLOTS: TeamSlot[] = [
     name: 'Sam Osewe',
     role: 'Regional Director Operations',
     division: 'Operations',
-    bio: 'Leads regional operations, coordinating people, timelines, and resources so client projects move smoothly from brief to delivery.',
+    bio: 'Leads regional operations, coordinating people, timelines, and resources so client projects move smoothly from brief to delivery. Works across accounts and production teams to resolve operational blockers and keep milestones clear.',
+    photoUrl: '/assets/profile/team/sam-osewe.jpg',
   },
   {
     id: 'ann-glory-wambui',
     name: 'Ann Glory Wambui',
     role: 'Account Manager',
     division: 'Client Services',
-    bio: 'Manages client communication and account priorities, keeping briefs, approvals, and deliverables aligned with project goals.',
+    bio: 'Manages client communication and account priorities, keeping briefs, approvals, and deliverables aligned with project goals. Connects client feedback with the right internal teams and tracks follow-through through review and delivery.',
+    photoUrl: '/assets/profile/team/ann-glory-wambui.jpg',
   },
   {
     id: 'sharon-odeko',
     name: 'Sharon Odeko',
     role: 'Business Operations Lead',
     division: 'Operations',
-    bio: 'Coordinates business operations and internal processes that keep client projects organized, resourced, and moving on schedule.',
+    bio: 'Coordinates business operations and internal processes that keep client projects organized, resourced, and moving on schedule. Clarifies ownership and supports teams with the planning needed for reliable delivery.',
+    photoUrl: '/assets/profile/team/sharon-odeko.jpg',
   },
   {
     id: 'chris-ontita',
     name: 'Chris Ontita',
     role: 'Finance Officer',
     division: 'Finance',
-    bio: 'Supports project budgeting, financial records, and payment coordination to help teams deliver client work responsibly.',
+    bio: 'Supports project budgeting, financial records, and payment coordination to help teams deliver client work responsibly. Tracks budget details and maintains clear financial documentation for project administration.',
+    photoUrl: '/assets/profile/team/chris-ontita.jpg',
   },
   {
     id: 'billy-marande',
     name: 'Billy Marande',
     role: 'Digital Marketing Project Manager',
     division: 'Digital Marketing',
-    bio: 'Plans and manages digital marketing projects, coordinating campaign schedules and deliverables around client objectives.',
+    bio: 'Plans and manages digital marketing projects, coordinating campaign schedules and deliverables around client objectives. Keeps stakeholders aligned on priorities, tracks progress, and helps digital work move through review and launch.',
+    photoUrl: '/assets/profile/team/billy-marande.jpg',
   },
   {
     id: 'aurelia-muhanji',
     name: 'Aurelia Muhanji',
     role: 'Digital Marketing Associate',
     division: 'Digital Marketing',
-    bio: 'Supports digital campaign execution through content coordination, platform updates, and day-to-day marketing tasks.',
+    bio: 'Supports digital campaign execution through content coordination, platform updates, and day-to-day marketing tasks. Helps keep publishing calendars and campaign materials organized, and flags follow-ups needed by the account team.',
+    photoUrl: '/assets/profile/team/aurelia-muhanji.jpg',
   },
   {
     id: 'abraham-wanyonyi',
     name: 'Abraham Wanyonyi',
     role: 'Media Buy',
     division: 'Media Buying',
-    bio: 'Plans and coordinates media buys to help client campaigns reach target audiences within agreed budgets.',
+    bio: 'Plans and coordinates media buys to help client campaigns reach target audiences within agreed budgets. Supports placement scheduling, budget tracking, and campaign checks so media activity follows the approved plan.',
+    photoUrl: '/assets/profile/team/abraham-wanyonyi.jpg',
   },
   {
     id: 'treza-achieng-ouma',
     name: 'Treza Achieng Ouma',
     role: 'Business Development Representative',
     division: 'Business Development',
-    bio: 'Builds prospect relationships, understands business needs, and connects potential clients with relevant agency services.',
+    bio: 'Builds prospect relationships, understands business needs, and connects potential clients with relevant agency services. Supports early discovery conversations and helps prepare clear next steps for prospective client briefs.',
+    photoUrl: '/assets/profile/team/treza-achieng-ouma.jpg',
   },
   {
     id: 'tuiza-amondi-ongodo',
     name: 'Tuiza Amondi Ongodo',
     role: 'Business Development Representative',
     division: 'Business Development',
-    bio: 'Develops new business opportunities and helps translate prospective client needs into clear project conversations.',
+    bio: 'Develops new business opportunities and helps translate prospective client needs into clear project conversations. Qualifies initial requirements, coordinates follow-up, and connects prospects with the agency teams best suited to their goals.',
+    photoUrl: '/assets/profile/team/tuiza-amondi-ongodo.jpg',
   },
   {
     id: 'maxwell-simba',
     name: 'Maxwell Simba',
     role: 'Visual Content Creator',
     division: 'Creative',
-    bio: 'Creates brand-aligned visual content that supports client storytelling and campaign delivery across digital channels.',
+    bio: 'Creates brand-aligned visual content that supports client storytelling and campaign delivery across digital channels. Develops and adapts creative assets to fit project briefs, brand guidelines, and the formats required by campaign teams.',
   },
   {
     id: 'irene-odhiambo',
     name: 'Irene Odhiambo',
     role: 'Digital Marketing Associate',
     division: 'Digital Marketing',
-    bio: 'Assists with campaign execution, content scheduling, and online audience engagement for client accounts.',
+    bio: 'Assists with campaign execution, content scheduling, and online audience engagement for client accounts. Helps maintain consistent publishing, monitors day-to-day activity, and supports account teams with routine campaign coordination.',
+    photoUrl: '/assets/profile/team/irene-odhiambo.jpg',
   },
   {
     id: 'timothy-wachira',
     name: 'Timothy Wachira',
     role: 'Digital Marketing Associate',
     division: 'Digital Marketing',
-    bio: 'Supports digital marketing activity and campaign coordination to keep work aligned with client goals and calendars.',
+    bio: 'Supports digital marketing activity and campaign coordination to keep work aligned with client goals and calendars. Assists with preparing campaign assets, tracking scheduled work, and keeping delivery tasks organized.',
+    photoUrl: '/assets/profile/team/timothy-wachira.jpg',
   },
   {
     id: 'paul-jakoyo',
     name: 'Paul Jakoyo',
     role: 'On ground Project Manager',
     division: 'Project Operations',
-    bio: 'Coordinates on-ground project activity, teams, and logistics to deliver client activations on schedule.',
+    bio: 'Coordinates on-ground project activity, teams, and logistics to deliver client activations on schedule. Supports event preparation, crew coordination, site readiness, and communication during live delivery.',
+    photoUrl: '/assets/profile/team/paul-jakoyo.jpg',
   },
 ];
 
@@ -136,10 +148,7 @@ export function TeamPage({ onOpenInquiry }: TeamPageProps) {
 
     return localizeTeamSlot({
       ...slot,
-      photoUrl:
-        slot.id === 'exec-duncan-aboka'
-          ? slot.photoUrl
-          : cmsMember?.photoUrl || slot.photoUrl,
+      photoUrl: slot.photoUrl || cmsMember?.photoUrl,
     });
   });
 
@@ -230,14 +239,14 @@ export function TeamPage({ onOpenInquiry }: TeamPageProps) {
                 variant={index % 2 === 0 ? 'slide-left' : 'slide-down'}
                 delayMs={index * 35}
               >
-                <article className="flex min-h-[76px] items-center gap-3 rounded-lg border border-white/20 bg-white/5 px-3 py-3 transition-colors hover:bg-white/10 sm:gap-4 sm:px-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-[#B81118] ring-2 ring-white/70">
+                <article className="flex min-h-[88px] items-start gap-3 rounded-lg border border-white/20 bg-white/5 px-3 py-3 transition-colors hover:bg-white/10 sm:gap-4 sm:px-4">
+                  <div className="mt-0.5 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-[#B81118] ring-2 ring-white/70 sm:mt-1 sm:h-16 sm:w-16">
                     {member.photoUrl ? (
                       <OptimizedImage
                         src={member.photoUrl}
                         alt={`${member.name} — ${member.role}`}
-                        width={96}
-                        height={96}
+                        width={128}
+                        height={128}
                         containerClassName="w-full h-full"
                         className="w-full h-full object-cover object-top"
                       />
