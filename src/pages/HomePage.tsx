@@ -20,6 +20,7 @@ import { useCms } from '../context/CmsContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PAGE_HERO_IMAGES } from '../data/pageHeroes';
 import { PORTFOLIO_CATEGORIES } from '../data/seedData';
+import { getArticleCardImageUrl, getProjectCardImageUrl } from '../data/cardImages';
 import {
   CORE_SERVICE_ROUTES,
   filterProjectsByCategory,
@@ -259,7 +260,7 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
                       >
                         <div className="relative h-40 sm:h-44 w-full overflow-hidden rounded-lg mb-3 bg-[#9E0E15]">
                           <OptimizedImage
-                            src={project.imageUrl}
+                            src={getProjectCardImageUrl(project)}
                             alt={project.title}
                             width={640}
                             height={420}
@@ -629,7 +630,7 @@ export function HomePage({ onNavigate, onOpenInquiry }: HomePageProps) {
                     >
                       <div className="relative h-40 sm:h-44 w-full overflow-hidden rounded-lg mb-3 bg-[#9E0E15]">
                         <OptimizedImage
-                          src={article.imageUrl}
+                          src={getArticleCardImageUrl(article)}
                           alt={article.title}
                           width={640}
                           height={420}

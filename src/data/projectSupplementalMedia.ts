@@ -104,24 +104,24 @@ export const PROJECT_SUPPLEMENTAL_MEDIA: Record<string, SupplementalEntry> = {
     market: 'Narok, Waiyaki Way & BBS Mall, Kenya',
     gallery: [
       {
-        imageUrl: '/assets/profile/work/galitos-waiyaki-way.jpg',
-        caption: "Galito's Waiyaki Way opening experiential activation with branded street presence.",
+        imageUrl: '/assets/profile/work/events/galitos-narok-58.jpg',
+        caption: "Galito's Narok team gathered at the branded branch entrance.",
       },
       {
-        imageUrl: '/assets/profile/work/galitos-narok-launch-1.jpg',
-        caption: "Galito's Narok branch launch roadshow, branded arch & high-footfall outreach.",
+        imageUrl: '/assets/profile/work/events/galitos-narok-99.jpg',
+        caption: "Galito's activation team and guests beneath the branded arch.",
       },
       {
-        imageUrl: '/assets/profile/work/galitos-narok-launch-2.jpg',
-        caption: "Galito's Narok activation ambassadors engaging local commuters and families.",
+        imageUrl: '/assets/profile/work/events/galitos-narok-20.jpg',
+        caption: "A live performance brings energy to the Galito's Narok activation.",
       },
       {
-        imageUrl: '/assets/profile/work/galitos-sauce-sampling-1.jpg',
-        caption: "Galito's BBS Mall interactive peri-peri sauce tasting station.",
+        imageUrl: '/assets/profile/work/events/galitos-narok-226.jpg',
+        caption: "The team celebrates together during the Galito's Narok event.",
       },
       {
-        imageUrl: '/assets/profile/work/galitos-sauce-sampling-2.jpg',
-        caption: 'On-ground product sampling tour driving direct flavor trial and basket conversion.',
+        imageUrl: '/assets/profile/work/events/galitos-narok-101.jpg',
+        caption: "Guests and the activation team interact at Galito's Narok.",
       },
     ],
   },
@@ -129,24 +129,28 @@ export const PROJECT_SUPPLEMENTAL_MEDIA: Record<string, SupplementalEntry> = {
     market: 'Nairobi (BBS Mall, Lucky Summer & Retail Locations)',
     gallery: [
       {
-        imageUrl: '/assets/profile/work/chicken-inn-bbs-mall-1.jpg',
-        caption: 'Chicken Inn BBS Mall in-store brand activation & shopper engagement.',
+        imageUrl: '/assets/profile/work/events/chicken-inn-lucky-summer-242.jpg',
+        caption: 'A ribbon-cutting moment at the Chicken Inn Lucky Summer opening.',
       },
       {
-        imageUrl: '/assets/profile/work/chicken-inn-bbs-mall-2.jpg',
-        caption: 'Direct customer interaction and promotional outreach inside BBS Mall.',
+        imageUrl: '/assets/profile/work/events/chicken-inn-lucky-summer-218.jpg',
+        caption: 'Community turnout at the Chicken Inn Lucky Summer activation.',
       },
       {
-        imageUrl: '/assets/profile/work/chicken-inn-valentines.jpg',
-        caption: "Chicken Inn Valentine's Day seasonal brand activation and engagement zone.",
+        imageUrl: '/assets/profile/work/events/chicken-inn-lucky-summer-16.jpg',
+        caption: 'A live activation moment outside the Chicken Inn outlet.',
       },
       {
-        imageUrl: '/assets/profile/work/chicken-inn-lucky-summer.jpg',
-        caption: 'Lucky Summer branch opening activation and community outreach.',
+        imageUrl: '/assets/profile/work/events/chicken-inn-lucky-summer-14.jpg',
+        caption: 'The decorated Chicken Inn Lucky Summer storefront.',
       },
       {
-        imageUrl: '/assets/profile/work/chicken-inn-champs.jpg',
-        caption: 'Chicken Inn Champs semi-finals fan engagement experience.',
+        imageUrl: '/assets/profile/work/events/chicken-inn-dsc00365.jpg',
+        caption: 'A Chicken Inn mascot welcomes visitors outside the branch.',
+      },
+      {
+        imageUrl: '/assets/profile/work/events/chicken-inn-dsc00326.jpg',
+        caption: 'Chicken Inn storefront dressed for a customer-facing event.',
       },
     ],
   },
@@ -167,12 +171,20 @@ export const PROJECT_SUPPLEMENTAL_MEDIA: Record<string, SupplementalEntry> = {
     market: 'Nairobi, Kenya',
     gallery: [
       {
-        imageUrl: '/assets/profile/work/kcb-event-1.jpg',
-        caption: 'Custom branded KCB registration counters, feather flags, and outdoor event setup.',
+        imageUrl: '/assets/profile/work/events/kcb-event-registration.jpg',
+        caption: 'KCB-branded registration counters at an outdoor event.',
       },
       {
-        imageUrl: '/assets/profile/work/kcb-event-2.jpg',
-        caption: 'Uniformed hospitality ambassadors managing delegate welcome and accreditation.',
+        imageUrl: '/assets/profile/work/events/kcb-event-outdoor.jpg',
+        caption: 'KCB event setup and guest areas in an outdoor setting.',
+      },
+      {
+        imageUrl: '/assets/profile/work/events/kcb-event-tent.jpg',
+        caption: 'A branded KCB hospitality and registration tent.',
+      },
+      {
+        imageUrl: '/assets/profile/work/events/kcb-event-guest-area.jpg',
+        caption: 'Guest seating and event space prepared for KCB attendees.',
       },
     ],
   },

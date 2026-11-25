@@ -7,6 +7,7 @@ import { SeoHead } from '../components/SeoHead';
 import { useCms } from '../context/CmsContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PAGE_HERO_IMAGES } from '../data/pageHeroes';
+import { getArticleCardImageUrl } from '../data/cardImages';
 import type { ArticleCategory } from '../types/cms';
 
 interface InsightsPageProps {
@@ -176,7 +177,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
             <article className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 overflow-hidden items-center">
               <Reveal variant="slide-left" className="lg:col-span-6 aspect-[4/3]">
                 <OptimizedImage
-                  src={spotlightArticle.imageUrl}
+                  src={getArticleCardImageUrl(spotlightArticle)}
                   alt={spotlightArticle.title}
                   width={960}
                   height={640}
@@ -285,7 +286,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
                       >
                         <div className="aspect-[16/10] w-full overflow-hidden mb-5 bg-[#F4F5F7]">
                           <OptimizedImage
-                            src={article.imageUrl}
+                            src={getArticleCardImageUrl(article)}
                             alt={article.title}
                             width={720}
                             height={450}

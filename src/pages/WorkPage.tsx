@@ -7,6 +7,7 @@ import { useCms } from '../context/CmsContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PAGE_HERO_IMAGES } from '../data/pageHeroes';
 import { PORTFOLIO_CATEGORIES } from '../data/seedData';
+import { getProjectCardImageUrl } from '../data/cardImages';
 import { CORE_SIX_SERVICES, filterProjectsByCategory, getServiceSlug } from '../lib/portfolio';
 import type { PortfolioCategory } from '../types/cms';
 
@@ -150,7 +151,7 @@ export function WorkPage({ onNavigate, onOpenInquiry }: WorkPageProps) {
                       >
                         <div className="relative h-48 sm:h-52 w-full overflow-hidden rounded-lg mb-3 bg-[#9E0E15]">
                           <OptimizedImage
-                            src={project.imageUrl}
+                            src={getProjectCardImageUrl(project)}
                             alt={project.title}
                             width={640}
                             height={420}

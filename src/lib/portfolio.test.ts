@@ -11,6 +11,7 @@ import {
   getServiceSlug,
   normalizeLegacyServiceTitle,
 } from './portfolio.ts';
+import { getArticleCardImageUrl, getProjectCardImageUrl } from '../data/cardImages.ts';
 import { DEFAULT_PORTFOLIO_PROJECTS, DEFAULT_SERVICES } from '../data/seedData.ts';
 import { PROJECT_DETAILS, getFallbackDetailForProject } from '../data/projectDetails.ts';
 import { SERVICE_DETAILS } from '../data/serviceDetails.ts';
@@ -45,6 +46,32 @@ test('findProjectBySlug resolves Cinnamon Energies even with trailing slash', ()
   );
   assert.ok(found);
   assert.equal(found.clientName, 'Cinnamon Energies');
+});
+
+test('event imagery refreshes portfolio and insight cards without changing their detail covers', () => {
+  const project = {
+    slug: 'chicken-inn-retail-events-mall-activations',
+    imageUrl: '/assets/profile/work/chicken-inn-bbs-mall-1.jpg',
+  };
+  const article = {
+    slug: 'bridging-influencer-storytelling-and-on-ground-activations',
+    imageUrl: '/assets/profile/work/galitos-waiyaki-way.jpg',
+  };
+
+  assert.equal(
+    getProjectCardImageUrl(project),
+    '/assets/profile/work/events/chicken-inn-lucky-summer-242.jpg'
+  );
+  assert.equal(
+    getArticleCardImageUrl(article),
+    '/assets/profile/work/events/galitos-narok-99.jpg'
+  );
+  assert.equal(project.imageUrl, '/assets/profile/work/chicken-inn-bbs-mall-1.jpg');
+  assert.equal(article.imageUrl, '/assets/profile/work/galitos-waiyaki-way.jpg');
+  assert.equal(
+    getProjectCardImageUrl({ slug: 'unmapped-project', imageUrl: '/original.jpg' }),
+    '/original.jpg'
+  );
 });
 
 test('Cinnamon Energies has rich multi-section detail data', () => {

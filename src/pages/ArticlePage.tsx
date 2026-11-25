@@ -6,6 +6,7 @@ import { Reveal } from '../components/ScrollReveal';
 import { SeoHead } from '../components/SeoHead';
 import { useCms } from '../context/CmsContext';
 import { useLanguage } from '../context/LanguageContext';
+import { getArticleCardImageUrl } from '../data/cardImages';
 import { parseArticleSections } from '../lib/motion';
 import { CORE_SIX_SERVICES, getServiceSlug } from '../lib/portfolio';
 
@@ -275,7 +276,7 @@ export function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
                         <div>
                           <div className="aspect-[16/10] w-full overflow-hidden mb-4">
                             <OptimizedImage
-                              src={item.imageUrl}
+                              src={getArticleCardImageUrl(item)}
                               alt={item.title}
                               width={720}
                               height={450}
