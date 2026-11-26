@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { PUBLIC_ARTICLE_SLUGS, PUBLIC_SERVICE_SLUGS, PUBLIC_WORK_SLUGS } from './src/data/sitemapSlugs.ts';
 import { VERIFIED_CONTACT } from './src/data/seedData.ts';
 import { getGeminiClient } from './src/lib/gemini.ts';
+import { sendInquiryNotificationEmail } from './src/lib/inquiry-email.ts';
 import { AuthorizationError, isRoleRecord, mayProvisionRole, mayRemoveActiveAdmin, resolveVerifiedPrincipal, roleAllows, type AppRole, type VerifiedPrincipal } from './src/lib/admin-auth.ts';
 import {
   createRateLimiter,
@@ -37,6 +38,11 @@ const firestoreDatabaseId = process.env.FIREBASE_FIRESTORE_DATABASE_ID?.trim() |
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT = 3000;
 const INQUIRY_IDEMPOTENCY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_LOCAL_INQUIRY_IDEMPOTENCY = 2_000;
+const localInquiryIdempotency = new Map<
+  string,
+  { payloadHash: string; referenceCode: string; expiresAt: number }
+>();
 
 const EMULATOR_PROJECT_ID = 'demo-exponential-local';
 const EMULATOR_DATABASE_ID = '(default)';
@@ -584,11 +590,6 @@ async function startServer() {
       };
 
       const store = await getInquiryStore();
-      if (!store) {
-        return res.status(503).json({
-          error: `Online submission is temporarily unavailable. Your entries remain in this form; contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`,
-        });
-      }
 
       // The client key is an idempotency token, not an authorization credential.
       // Key the payload digest so the private record does not contain a plain PII hash.
@@ -597,13 +598,80 @@ async function startServer() {
         .update(JSON.stringify(sanitizedPayload))
         .digest('hex');
       const idempotencyId = crypto.createHash('sha256').update(idempotencyKey.data).digest('hex');
-      const idempotencyRef = store.db.collection('_inquiry_idempotency').doc(idempotencyId);
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const createProposedReference = () => {
+        const suffix = Array.from(crypto.randomBytes(12), (byte) => chars[byte % chars.length]).join('');
+        return `EMA-${new Date().getFullYear()}-${suffix}`;
+      };
+
+      const deliverViaEmailFallback = async () => {
+        const now = Date.now();
+        const existingLocal = localInquiryIdempotency.get(idempotencyId);
+        if (existingLocal && existingLocal.expiresAt > now) {
+          if (existingLocal.payloadHash !== payloadHash) {
+            return res.status(409).json({
+              error: 'This submission key was already used for different form details. Please submit again.',
+            });
+          }
+          return res.status(200).json({ success: true, referenceCode: existingLocal.referenceCode });
+        }
+
+        const proposedReference = createProposedReference();
+        const emailResult = await sendInquiryNotificationEmail(
+          {
+            referenceCode: proposedReference,
+            ...sanitizedPayload,
+          },
+          { disabled: emulatorMode }
+        );
+
+        if (emailResult.sent) {
+          if (localInquiryIdempotency.size >= MAX_LOCAL_INQUIRY_IDEMPOTENCY) {
+            for (const [k, entry] of localInquiryIdempotency) {
+              if (entry.expiresAt <= now) localInquiryIdempotency.delete(k);
+              if (localInquiryIdempotency.size < MAX_LOCAL_INQUIRY_IDEMPOTENCY) break;
+            }
+            if (localInquiryIdempotency.size >= MAX_LOCAL_INQUIRY_IDEMPOTENCY) {
+              const oldestKey = localInquiryIdempotency.keys().next().value;
+              if (oldestKey) localInquiryIdempotency.delete(oldestKey);
+            }
+          }
+          localInquiryIdempotency.set(idempotencyId, {
+            payloadHash,
+            referenceCode: proposedReference,
+            expiresAt: now + INQUIRY_IDEMPOTENCY_TTL_MS,
+          });
+          return res.status(201).json({ success: true, referenceCode: proposedReference });
+        }
+
+        if (emailResult.skipped) {
+          console.error(
+            `[inquiries] Inquiry ${proposedReference} not delivered: Firestore Admin unavailable and RESEND_API_KEY is unset.`
+          );
+        } else {
+          console.error(
+            `[inquiries] Inquiry ${proposedReference} email delivery failed (status=${emailResult.status ?? 'network'}, code=${emailResult.errorName ?? 'unknown'})`
+          );
+        }
+        return res.status(503).json({
+          error: `We could not confirm that your inquiry was recorded. Your entries remain in this form; contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`,
+        });
+      };
+
+      if (!store) {
+        if (emulatorMode) {
+          return res.status(503).json({
+            error: `Online submission is temporarily unavailable. Your entries remain in this form; contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`,
+          });
+        }
+        return deliverViaEmailFallback();
+      }
+
+      const idempotencyRef = store.db.collection('_inquiry_idempotency').doc(idempotencyId);
 
       try {
         for (let attempt = 0; attempt < 3; attempt += 1) {
-          const suffix = Array.from(crypto.randomBytes(12), (byte) => chars[byte % chars.length]).join('');
-          const proposedReference = `EMA-${new Date().getFullYear()}-${suffix}`;
+          const proposedReference = createProposedReference();
           const inquiryRef = store.db.collection('inquiries').doc();
           const referenceRef = store.db.collection('_inquiry_references').doc(proposedReference);
 
@@ -656,6 +724,20 @@ async function startServer() {
             return res.status(409).json({ error: 'This submission key was already used for different form details. Please submit again.' });
           }
           if (result.kind === 'saved') {
+            if (!result.duplicate) {
+              const emailResult = await sendInquiryNotificationEmail(
+                {
+                  referenceCode: result.referenceCode,
+                  ...sanitizedPayload,
+                },
+                { disabled: emulatorMode }
+              );
+              if (!emailResult.sent && !emailResult.skipped) {
+                console.error(
+                  `[inquiries] Email notification failed for ${result.referenceCode} (status=${emailResult.status ?? 'network'}, code=${emailResult.errorName ?? 'unknown'})`
+                );
+              }
+            }
             return res.status(result.duplicate ? 200 : 201).json({ success: true, referenceCode: result.referenceCode });
           }
         }
@@ -663,6 +745,9 @@ async function startServer() {
           error: `We could not confirm that your inquiry was recorded. Your entries remain in this form; contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`,
         });
       } catch {
+        if (!emulatorMode) {
+          return deliverViaEmailFallback();
+        }
         return res.status(503).json({
           error: `We could not confirm that your inquiry was recorded. Your entries remain in this form; contact ${VERIFIED_CONTACT.email} or ${VERIFIED_CONTACT.primaryPhone}.`,
         });
