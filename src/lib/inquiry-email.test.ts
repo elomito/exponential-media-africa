@@ -108,3 +108,44 @@ test('sendInquiryNotificationEmail honors valid env overrides and handles API fa
   assert.deepEqual(capturedBody.to, ['leads@exponentialmedia.africa']);
   assert.equal(capturedBody.from, 'Exponential Agency <inquiries@exponentialmedia.africa>');
 });
+
+test('sendInquiryNotificationEmail skips sending in production when INQUIRY_TO_EMAIL is missing or invalid', async () => {
+  let called = false;
+  const mockFetch = (async () => {
+    called = true;
+    return new Response(JSON.stringify({ id: 'should-not-send' }), { status: 200 });
+  }) as typeof fetch;
+
+  const missingTo = await sendInquiryNotificationEmail(sampleInquiry, {
+    env: { NODE_ENV: 'production', RESEND_API_KEY: 're_prod_key' },
+    fetchImpl: mockFetch,
+  });
+  assert.deepEqual(missingTo, { sent: false, skipped: true });
+
+  const invalidTo = await sendInquiryNotificationEmail(sampleInquiry, {
+    env: { NODE_ENV: 'production', RESEND_API_KEY: 're_prod_key', INQUIRY_TO_EMAIL: 'not-an-email' },
+    fetchImpl: mockFetch,
+  });
+  assert.deepEqual(invalidTo, { sent: false, skipped: true });
+  assert.equal(called, false);
+});
+
+test('sendInquiryNotificationEmail sends in production when INQUIRY_TO_EMAIL is explicitly configured', async () => {
+  let capturedBody: Record<string, unknown> = {};
+  const mockFetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    capturedBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+    return new Response(JSON.stringify({ id: 'email_prod_1' }), { status: 200 });
+  }) as typeof fetch;
+
+  const result = await sendInquiryNotificationEmail(sampleInquiry, {
+    env: {
+      NODE_ENV: 'production',
+      RESEND_API_KEY: 're_prod_key',
+      INQUIRY_TO_EMAIL: 'info@exponentialmedia.africa',
+    },
+    fetchImpl: mockFetch,
+  });
+
+  assert.deepEqual(result, { sent: true, id: 'email_prod_1' });
+  assert.deepEqual(capturedBody.to, ['info@exponentialmedia.africa']);
+});

@@ -165,6 +165,7 @@ export async function sendInquiryNotificationEmail(
   }
 
   const env = options.env ?? process.env;
+  const isProduction = env.NODE_ENV === 'production';
   const apiKey = env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     return { sent: false, skipped: true };
@@ -173,7 +174,13 @@ export async function sendInquiryNotificationEmail(
   const configuredTo = env.INQUIRY_TO_EMAIL?.trim() || '';
   const toEmail = isValidEmailAddress(configuredTo)
     ? sanitizePlainText(configuredTo).toLowerCase()
-    : DEFAULT_INQUIRY_RECIPIENT;
+    : isProduction
+      ? ''
+      : DEFAULT_INQUIRY_RECIPIENT;
+
+  if (!toEmail) {
+    return { sent: false, skipped: true };
+  }
 
   const fromHeader = normalizeFromHeader(env.INQUIRY_FROM_EMAIL || '');
 
